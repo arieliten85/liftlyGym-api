@@ -16,10 +16,14 @@
     "@google/genai": "^1.44.0",
     "@google/generative-ai": "^0.24.1",
     "@openrouter/sdk": "^0.9.11",
+    "@prisma/client": "^6.19.2",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
-    "openai": "^6.27.0"
+    "jsonwebtoken": "^9.0.3",
+    "openai": "^6.27.0",
+    "prisma": "^6.19.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

@@ -1,21 +1,32 @@
 const authService = require("../services/auth.service");
 
-exports.register = async (req, res) => {
-  try {
-    const userData = req.body;
+class AuthController {
 
-    const result = await authService.registerUser(userData);
-
-    return res.status(201).json({
-      message: "Usuario registrado (mock)",
-      user: result,
-    });
-
-  } catch (error) {
-    console.error("Register error:", error);
-
-    return res.status(500).json({
-      message: "Error al registrar usuario",
-    });
+  async register(req, res) {
+    try {
+      const user = await authService.registerUser(req.body);
+      res.status(201).json(user);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
   }
-};
+
+  async login(req, res) {
+    try {
+      const { email, password } = req.body;
+
+      
+
+      const result = await authService.loginUser(email, password);
+
+        
+
+      res.json(result);
+    } catch (error) {
+      res.status(401).json({ message: error.message });
+    }
+  }
+
+}
+
+module.exports = new AuthController();
