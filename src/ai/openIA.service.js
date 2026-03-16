@@ -11,13 +11,13 @@ const USE_MOCK = true;
 const MOCK_RESPONSE = {
   routine: {
     exercises: [
-      { name: "dominadas", reps: "6-8", restSeconds: 120, sets: 4, weight: 0 },
+      { name: "dominadas", reps: "6-8", restSeconds: 120, sets: 4, weight: 80 },
       {
         name: "remo_barra",
         reps: "8-10",
         restSeconds: 90,
         sets: 4,
-        weight: 100,
+        weight: 30,
       },
       {
         name: "jalon_al_pecho",
