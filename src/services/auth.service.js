@@ -3,7 +3,6 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 class AuthService {
-
   async registerUser(userData) {
     const { name, email, password } = userData;
 
@@ -33,28 +32,22 @@ class AuthService {
         email: user.email,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "7d" },
     );
 
     return { token };
   }
 
   async loginUser(email, password) {
- console.log("------------->paso 1",  email)
     const user = await prisma.user.findUnique({
       where: { email },
     });
 
-
-       console.log("------------->paso 2",  user)
-
     if (!user) {
       throw new Error("Usuario no encontrado");
     }
- console.log("------------->password",  password)
-  console.log("------------->user.password",  user.password)
-    const validPassword = await bcrypt.compare(password, user.password);
- 
+
+    const validPassword = await bcrypt.compare(password.trim(), user.password);
 
     if (!validPassword) {
       throw new Error("Contraseña incorrecta");
@@ -67,7 +60,7 @@ class AuthService {
         email: user.email,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "7d" },
     );
 
     return { token };
