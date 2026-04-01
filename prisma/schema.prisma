@@ -8,9 +8,99 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  password      String
+  createdAt     DateTime       @default(now())
+  routines      Routine[]
+  notifications Notification[]
+}
+
+model Routine {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  mode       String   // "quick" | "custom"
+  goal       String
+  experience String
+  equipment  String
+  split      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  exercises     RoutineExercise[]
+  sessions      WorkoutSession[]
+  notifications Notification[]
+}
+
+model RoutineExercise {
+  id          String   @id @default(uuid())
+  routineId   String
+  routine     Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  name        String
+  sets        Int
+  reps        String
+  restSeconds Int
+  weight      Float?
+  order       Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model WorkoutSession {
+  id           String   @id @default(uuid())
+  routineId    String
+  routine      Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  startedAt    DateTime
+  completedAt  DateTime
+  wasAbandoned Boolean  @default(false)
+  intensity    Int?     // feedback 1-5
+  energy       Int?     // feedback 1-5
+  painLevel    Int?     // feedback 1-5
+  comment      String?
+  createdAt    DateTime @default(now())
+
+  exercises SessionExercise[]
+}
+
+model SessionExercise {
+  id        String         @id @default(uuid())
+  sessionId String
+  session   WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   name      String
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
+
+  // ✅ Campos calculados al guardar la sesión — hacen las queries de progreso triviales
+  // Sin estos campos, cada query de gráfico tendría que recalcular desde SetLog
+  setsCompleted Int     @default(0)  // series no salteadas
+  setsSkipped   Int     @default(0)  // series salteadas
+  maxWeight     Float?               // peso máximo levantado en esta sesión
+  totalVolume   Float?               // sum(reps * weight) de series completadas
+
+  setLogs SetLog[]
+}
+
+model SetLog {
+  id                String          @id @default(uuid())
+  sessionExerciseId String
+  sessionExercise   SessionExercise @relation(fields: [sessionExerciseId], references: [id], onDelete: Cascade)
+  setNumber         Int
+  repsCompleted     Int?
+  weight            Float?
+  skipped           Boolean @default(false)
+}
+
+model Notification {
+  id                 String   @id @default(uuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routineId          String?
+  routine            Routine? @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  title              String
+  body               String
+  type               String
+  read               Boolean  @default(false)
+  pendingAdjustments Json?   
+  createdAt          DateTime @default(now())
 }
