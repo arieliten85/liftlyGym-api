@@ -40,6 +40,7 @@ model RoutineExercise {
   routineId   String
   routine     Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
   name        String
+  muscle      String?  
   sets        Int
   reps        String
   restSeconds Int
@@ -71,7 +72,7 @@ model SessionExercise {
   session   WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   name      String
 
-  // ✅ Campos calculados al guardar la sesión — hacen las queries de progreso triviales
+  // Campos calculados al guardar la sesión — hacen las queries de progreso triviales
   // Sin estos campos, cada query de gráfico tendría que recalcular desde SetLog
   setsCompleted Int     @default(0)  // series no salteadas
   setsSkipped   Int     @default(0)  // series salteadas

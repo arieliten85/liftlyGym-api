@@ -13,22 +13,25 @@ const {
   applyAdjustments,
   buildAdjustmentNotification,
 } = require("../helpers/routine/adjustment.helper");
-
 const prisma = new PrismaClient();
+const exercisesDB = require("../data/exercises.mock");
 
 exports.generateRoutine = async (userId, payload) => {
   const { modo, objetivo, nivel, equipamiento, rutina, ejercicios } = payload;
 
   let exercises;
 
-  // modo "quick" = la IA arma la rutina sola, sino usamos lo que mandó el user
   if (modo === "quick") {
     const rutinaBase = generarRutina(payload);
     const rutinaConIA = await aiService.generateRoutine({
       ...payload,
       exercises: rutinaBase.exercises,
     });
-    exercises = rutinaConIA.routine.exercises;
+
+    exercises = rutinaConIA.routine.exercises.map((ex) => {
+      const found = exercisesDB.find((e) => e.name === ex.name);
+      return { ...ex, muscle: found?.muscle ?? null };
+    });
   } else {
     exercises = ejercicios;
   }
@@ -45,6 +48,7 @@ exports.generateRoutine = async (userId, payload) => {
       exercises: {
         create: exercises.map((ex, index) => ({
           name: ex.name,
+          muscle: ex.muscle ?? null,
           sets: ex.sets,
           reps: ex.reps,
           restSeconds: ex.restSeconds,

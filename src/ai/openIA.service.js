@@ -98,42 +98,72 @@ Formato exacto:
       return MOCK_ADJUST;
     }
 
+    //     const prompt = `
+    // Sos un entrenador personal experto en progresión de carga.
+    // El usuario completó una sesión. Analizá el resumen y ajustá su rutina para la próxima.
+
+    // Contexto:
+    // - Objetivo: ${goal}
+    // - Nivel: ${experience}
+    // - Sesiones completadas con esta rutina: ${sessionCount}
+
+    // Feedback subjetivo (escala 1-5):
+    // - Intensidad percibida: ${feedback.intensity ?? "no indicado"}
+    // - Energía al terminar: ${feedback.energy ?? "no indicado"}
+    // - Dolor/molestia: ${feedback.painLevel ?? "no indicado"}
+    // - Comentario: ${feedback.comment || "ninguno"}
+
+    // Resumen planificado vs ejecutado:
+    // ${JSON.stringify(summary, null, 2)}
+
+    // Reglas de ajuste:
+    // 1. Si completó TODAS las series con el peso planificado e intensidad ≤ 3 → subí peso (2.5-5kg) o reps
+    // 2. Si no completó todas las series o intensidad ≥ 4 → mantené o bajá ligeramente
+    // 3. Si dolor ≥ 4 → reducí carga del ejercicio afectado
+    // 4. Si hay series salteadas sistemáticamente → reducí sets
+    // 5. NUNCA cambies el nombre de los ejercicios
+    // 6. Solo incluí ejercicios que realmente necesitan cambio
+    // 7. Campos permitidos: sets (Int), reps (String "x-y"), weight (Float), restSeconds (Int)
+    // 8. Si no hay nada que ajustar devolvé adjustments vacío
+
+    // Devuelve SOLO JSON válido sin texto adicional.
+    // Formato exacto:
+    // {
+    //   "adjustments": [
+    //     { "name": "nombre_ejercicio", "weight": 32.5 }
+    //   ]
+    // }`;
     const prompt = `
-Sos un entrenador personal experto en progresión de carga.
-El usuario completó una sesión. Analizá el resumen y ajustá su rutina para la próxima.
+Actúa como un entrenador personal profesional experto en gimnasio.
+Analiza los datos del usuario y genera una rutina optimizada con pesos base reales.
 
-Contexto:
-- Objetivo: ${goal}
-- Nivel: ${experience}
-- Sesiones completadas con esta rutina: ${sessionCount}
+Datos del usuario:
+${JSON.stringify(userData, null, 2)}
 
-Feedback subjetivo (escala 1-5):
-- Intensidad percibida: ${feedback.intensity ?? "no indicado"}
-- Energía al terminar: ${feedback.energy ?? "no indicado"}
-- Dolor/molestia: ${feedback.painLevel ?? "no indicado"}
-- Comentario: ${feedback.comment || "ninguno"}
+Reglas para los pesos (weight):
+- Asigna un peso base REALISTA en kg según el ejercicio y nivel de experiencia
+- principiante: pesos ligeros/moderados (ej: press banca 30-40kg, curl 8-12kg)
+- intermedio: pesos moderados (ej: press banca 60-80kg, curl 15-20kg)
+- avanzado: pesos altos (ej: press banca 90-120kg, curl 22-30kg)
+- Ejercicios corporales (dominadas, fondos): weight = 0
+- Ejercicios de aislamiento: siempre menos peso que compuestos
 
-Resumen planificado vs ejecutado:
-${JSON.stringify(summary, null, 2)}
-
-Reglas de ajuste:
-1. Si completó TODAS las series con el peso planificado e intensidad ≤ 3 → subí peso (2.5-5kg) o reps
-2. Si no completó todas las series o intensidad ≥ 4 → mantené o bajá ligeramente
-3. Si dolor ≥ 4 → reducí carga del ejercicio afectado
-4. Si hay series salteadas sistemáticamente → reducí sets
-5. NUNCA cambies el nombre de los ejercicios
-6. Solo incluí ejercicios que realmente necesitan cambio
-7. Campos permitidos: sets (Int), reps (String "x-y"), weight (Float), restSeconds (Int)
-8. Si no hay nada que ajustar devolvé adjustments vacío
+Reglas generales:
+- Usa EXACTAMENTE los mismos ejercicios proporcionados en userData.exercises, ni uno más ni uno menos
+- NUNCA agregues ni elimines ejercicios de la lista
+- NUNCA cambies el nombre de los ejercicios
+- El array de exercises del resultado debe tener EXACTAMENTE la misma cantidad que userData.exercises
+- Adapta intensidad según experiencia
 
 Devuelve SOLO JSON válido sin texto adicional.
 Formato exacto:
 {
-  "adjustments": [
-    { "name": "nombre_ejercicio", "weight": 32.5 }
-  ]
+  "routine": {
+    "exercises": [
+      { "name": "string", "sets": 3, "reps": "10-12", "restSeconds": 90, "weight": 40 }
+    ]
+  }
 }`;
-
     return this._callAI(prompt);
   }
 
