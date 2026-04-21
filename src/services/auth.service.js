@@ -1,0 +1,70 @@
+const prisma = require("../lib/prisma");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+
+class AuthService {
+  async registerUser(userData) {
+    const { name, email, password } = userData;
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      throw new Error("El email ya está registrado");
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+      },
+    });
+
+    // generar token también al registrarse
+    const token = jwt.sign(
+      {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" },
+    );
+
+    return { token };
+  }
+
+  async loginUser(email, password) {
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new Error("Usuario no encontrado");
+    }
+
+    const validPassword = await bcrypt.compare(password.trim(), user.password);
+
+    if (!validPassword) {
+      throw new Error("Contraseña incorrecta");
+    }
+
+    const token = jwt.sign(
+      {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" },
+    );
+
+    return { token };
+  }
+}
+
+module.exports = new AuthService();

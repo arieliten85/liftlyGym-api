@@ -1,155 +1,143 @@
 module.exports = [
-  /* -------- PECHO -------- */
+  // ─── CHEST ───────────────────────────────────────────────
+  { slug: "bench_press",                 name: "press_banca",                   muscle: "chest",     equipment: ["gym"] },
+  { slug: "incline_barbell_press",       name: "press_inclinado_barra",         muscle: "chest",     equipment: ["gym"] },
+  { slug: "decline_barbell_press",       name: "press_declinado_barra",         muscle: "chest",     equipment: ["gym"] },
+  { slug: "cable_fly",                   name: "aperturas_polea",               muscle: "chest",     equipment: ["gym"] },
+  { slug: "cable_crossover",             name: "crossover_polea",               muscle: "chest",     equipment: ["gym"] },
+  { slug: "dumbbell_press",              name: "press_mancuernas",              muscle: "chest",     equipment: ["dumbbells"] },  
+  { slug: "incline_dumbbell_press",      name: "press_inclinado_mancuernas",    muscle: "chest",     equipment: ["dumbbells"] },
+  { slug: "decline_dumbbell_press",      name: "press_declinado_mancuernas",    muscle: "chest",     equipment: ["dumbbells"] },
+  { slug: "dumbbell_fly",                name: "aperturas_mancuernas",          muscle: "chest",     equipment: ["dumbbells"] },
+   
+  { slug: "push_up",                     name: "flexiones",                     muscle: "chest",     equipment: ["bodyweight"] },
+  { slug: "diamond_push_up",             name: "flexiones_diamante",            muscle: "chest",     equipment: ["bodyweight"] },
+  { slug: "incline_push_up",             name: "flexiones_inclinadas",          muscle: "chest",     equipment: ["bodyweight"] },
+  { slug: "decline_push_up",             name: "flexiones_declinadas",          muscle: "chest",     equipment: ["bodyweight"] },
+  { slug: "archer_push_up",              name: "flexiones_archer",              muscle: "chest",     equipment: ["bodyweight"] },
+  { slug: "band_press",                  name: "press_bandas",                  muscle: "chest",     equipment: ["bands"] },
+  { slug: "band_fly",                    name: "aperturas_bandas",              muscle: "chest",     equipment: ["bands"] },
+  { slug: "incline_band_press",          name: "press_inclinado_bandas",        muscle: "chest",     equipment: ["bands"] },
+  { slug: "band_crossover",              name: "crossover_bandas",              muscle: "chest",     equipment: ["bands"] },
 
-  { name: "press_banca", muscle: "pecho", equipment: ["gym"] },
+  // ─── BACK ────────────────────────────────────────────────
+  { slug: "pull_up",                     name: "dominadas",                     muscle: "back",      equipment: ["bodyweight", "gym"] },
+  { slug: "chin_up_back",               name: "dominadas_supinas",             muscle: "back",      equipment: ["bodyweight", "gym"] },
+  { slug: "barbell_row",                 name: "remo_barra",                    muscle: "back",      equipment: ["gym"] },
+  { slug: "lat_pull_down",               name: "jalon_al_pecho",                muscle: "back",      equipment: ["gym"] },
+  { slug: "close_grip_lat_pull_down",    name: "jalon_agarre_estrecho",         muscle: "back",      equipment: ["gym"] },
+  { slug: "cable_row",                   name: "remo_en_polea",                 muscle: "back",      equipment: ["gym"] },
+  { slug: "dumbbell_row",                name: "remo_mancuernas",               muscle: "back",      equipment: ["dumbbells"] },
+  { slug: "dumbbell_pullover_back",      name: "pullover_mancuerna_espalda",    muscle: "back",      equipment: ["dumbbells"] },
+  { slug: "one_arm_dumbbell_row",        name: "remo_mancuerna_un_brazo",       muscle: "back",      equipment: ["dumbbells"] },
+  { slug: "band_row",                    name: "remo_bandas",                   muscle: "back",      equipment: ["bands"] },
+  { slug: "band_lat_pull",               name: "jalon_bandas",                  muscle: "back",      equipment: ["bands"] },
+  { slug: "one_arm_band_row",            name: "remo_bandas_un_brazo",          muscle: "back",      equipment: ["bands"] },
+  { slug: "superman",                    name: "superman",                      muscle: "back",      equipment: ["bodyweight"] },
+  { slug: "inverted_row",                name: "remo_invertido",                muscle: "back",      equipment: ["bodyweight"] },
+  { slug: "bird_dog",                    name: "bird_dog",                      muscle: "back",      equipment: ["bodyweight"] },
 
-  { name: "press_mancuernas", muscle: "pecho", equipment: ["mancuernas"] },
+  // ─── SHOULDERS ───────────────────────────────────────────
+  { slug: "military_press",              name: "press_militar",                 muscle: "shoulders", equipment: ["gym"] },
+  { slug: "arnold_press_barbell",        name: "press_arnold_barra",            muscle: "shoulders", equipment: ["gym"] },
+  { slug: "cable_lateral_raise",         name: "elevaciones_laterales_polea",   muscle: "shoulders", equipment: ["gym"] },
+  { slug: "upright_row",                 name: "remo_al_menton",                muscle: "shoulders", equipment: ["gym"] },
+  { slug: "dumbbell_shoulder_press",     name: "press_hombro_mancuernas",       muscle: "shoulders", equipment: ["dumbbells"] },
+  { slug: "arnold_press",                name: "press_arnold",                  muscle: "shoulders", equipment: ["dumbbells"] },
+  { slug: "dumbbell_lateral_raise",      name: "elevaciones_laterales",         muscle: "shoulders", equipment: ["dumbbells"] },
+  { slug: "dumbbell_front_raise",        name: "elevaciones_frontales",         muscle: "shoulders", equipment: ["dumbbells"] },
+  { slug: "reverse_fly",                 name: "pajaros",                       muscle: "shoulders", equipment: ["dumbbells"] },
+  { slug: "band_lateral_raise",          name: "elevaciones_bandas",            muscle: "shoulders", equipment: ["bands"] },
+  { slug: "band_shoulder_press",         name: "press_hombro_bandas",           muscle: "shoulders", equipment: ["bands"] },
+  { slug: "band_front_raise",            name: "elevaciones_frontales_bandas",  muscle: "shoulders", equipment: ["bands"] },
+  { slug: "band_face_pull",              name: "face_pull_bandas",              muscle: "shoulders", equipment: ["bands"] },
+  { slug: "pike_push_up",                name: "pike_pushups",                  muscle: "shoulders", equipment: ["bodyweight"] },
+  { slug: "handstand_push_up",           name: "handstand_pushups",             muscle: "shoulders", equipment: ["bodyweight"] },
+  { slug: "floor_lateral_raise",         name: "elevaciones_laterales_piso",    muscle: "shoulders", equipment: ["bodyweight"] },
 
-  {
-    name: "press_inclinado_mancuernas",
-    muscle: "pecho",
-    equipment: ["mancuernas"],
-  },
+  // ─── BICEPS ──────────────────────────────────────────────
+  { slug: "barbell_curl",                name: "curl_barra",                    muscle: "biceps",    equipment: ["gym"] },
+  { slug: "ez_bar_curl",                 name: "curl_barra_z",                  muscle: "biceps",    equipment: ["gym"] },
+  { slug: "preacher_curl",               name: "curl_predicador",               muscle: "biceps",    equipment: ["gym"] },
+  { slug: "cable_low_curl",              name: "curl_polea_baja",               muscle: "biceps",    equipment: ["gym"] },
+  { slug: "dumbbell_curl",               name: "curl_mancuernas",               muscle: "biceps",    equipment: ["dumbbells"] },
+  { slug: "hammer_curl",                 name: "curl_martillo",                 muscle: "biceps",    equipment: ["dumbbells"] },
+  { slug: "concentration_curl",          name: "curl_concentrado",              muscle: "biceps",    equipment: ["dumbbells"] },
+  { slug: "incline_dumbbell_curl",       name: "curl_inclinado_mancuernas",     muscle: "biceps",    equipment: ["dumbbells"] },
+  { slug: "band_curl",                   name: "curl_bandas",                   muscle: "biceps",    equipment: ["bands"] },
+  { slug: "band_hammer_curl",            name: "curl_martillo_bandas",          muscle: "biceps",    equipment: ["bands"] },
+  { slug: "band_preacher_curl",          name: "curl_predicador_bandas",        muscle: "biceps",    equipment: ["bands"] },
+  { slug: "chin_up",                     name: "chinups",                       muscle: "biceps",    equipment: ["bodyweight"] },
+  { slug: "close_grip_chin_up",          name: "chinups_agarre_estrecho",       muscle: "biceps",    equipment: ["bodyweight"] },
+  { slug: "towel_curl",                  name: "curl_towel",                    muscle: "biceps",    equipment: ["bodyweight"] },
 
-  { name: "aperturas_mancuernas", muscle: "pecho", equipment: ["mancuernas"] },
+  // ─── TRICEPS ─────────────────────────────────────────────
+  { slug: "dips",                        name: "fondos_triceps",                muscle: "triceps",   equipment: ["bodyweight", "gym"] },
+  { slug: "cable_triceps_extension",     name: "extension_triceps_polea",       muscle: "triceps",   equipment: ["gym"] },
+  { slug: "french_press",                name: "press_frances",                 muscle: "triceps",   equipment: ["gym"] },
+  { slug: "reverse_cable_extension",     name: "extension_triceps_polea_inv",   muscle: "triceps",   equipment: ["gym"] },
+  { slug: "dumbbell_triceps_extension",  name: "extension_triceps_mancuerna",   muscle: "triceps",   equipment: ["dumbbells"] },
+  { slug: "triceps_kickback",            name: "patada_triceps",                muscle: "triceps",   equipment: ["dumbbells"] },
+  { slug: "french_press_dumbbells",      name: "press_frances_mancuernas",      muscle: "triceps",   equipment: ["dumbbells"] },
+  { slug: "band_triceps_extension",      name: "extension_triceps_bandas",      muscle: "triceps",   equipment: ["bands"] },
+  { slug: "band_triceps_kickback",       name: "patada_triceps_bandas",         muscle: "triceps",   equipment: ["bands"] },
+  { slug: "french_press_bands",          name: "press_frances_bandas",          muscle: "triceps",   equipment: ["bands"] },
+  { slug: "diamond_push_up_triceps",     name: "flexiones_diamante_triceps",    muscle: "triceps",   equipment: ["bodyweight"] },
+  { slug: "bench_dips",                  name: "dips_banco",                    muscle: "triceps",   equipment: ["bodyweight"] },
+  { slug: "close_grip_push_up",          name: "flexiones_cerradas",            muscle: "triceps",   equipment: ["bodyweight"] },
 
-  { name: "flexiones", muscle: "pecho", equipment: ["peso_corporal"] },
+  // ─── LEGS ────────────────────────────────────────────────
+  { slug: "squat",                       name: "sentadilla",                    muscle: "legs",      equipment: ["gym", "bodyweight"] },
+  { slug: "leg_press",                   name: "prensa",                        muscle: "legs",      equipment: ["gym"] },
+  { slug: "leg_extension",               name: "extension_cuadriceps",          muscle: "legs",      equipment: ["gym"] },
+  { slug: "leg_curl",                    name: "curl_femoral",                  muscle: "legs",      equipment: ["gym"] },
+  { slug: "romanian_deadlift",           name: "peso_muerto_rumano",            muscle: "legs",      equipment: ["gym", "dumbbells"] },
+  { slug: "deadlift",                    name: "peso_muerto",                   muscle: "legs",      equipment: ["gym"] },
+  { slug: "calf_raise",                  name: "elevacion_talones",             muscle: "legs",      equipment: ["bodyweight", "gym"] },
+  { slug: "hack_squat",                  name: "sentadilla_hack",               muscle: "legs",      equipment: ["gym"] },
+  { slug: "goblet_squat",                name: "sentadilla_goblet",             muscle: "legs",      equipment: ["dumbbells"] },
+  { slug: "lunge",                       name: "zancadas",                      muscle: "legs",      equipment: ["dumbbells", "bodyweight"] },
+  { slug: "walking_lunge",               name: "zancadas_caminando",            muscle: "legs",      equipment: ["dumbbells", "bodyweight"] },
+  { slug: "sumo_squat_dumbbell",         name: "sentadilla_sumo_mancuerna",     muscle: "legs",      equipment: ["dumbbells"] },
+  { slug: "calf_raise_dumbbell",         name: "elevacion_talones_mancuerna",   muscle: "legs",      equipment: ["dumbbells"] },
+  { slug: "band_squat",                  name: "sentadilla_bandas",             muscle: "legs",      equipment: ["bands"] },
+  { slug: "band_leg_curl",               name: "curl_femoral_bandas",           muscle: "legs",      equipment: ["bands"] },
+  { slug: "band_leg_extension",          name: "extension_cuadriceps_bandas",   muscle: "legs",      equipment: ["bands"] },
+  { slug: "band_lunge",                  name: "zancadas_bandas",               muscle: "legs",      equipment: ["bands"] },
+  { slug: "bulgarian_split_squat",       name: "sentadilla_bulgara",            muscle: "legs",      equipment: ["bodyweight"] },
+  { slug: "pistol_squat",                name: "pistol_squat",                  muscle: "legs",      equipment: ["bodyweight"] },
+  { slug: "step_up",                     name: "step_up",                       muscle: "legs",      equipment: ["bodyweight"] },
 
-  { name: "flexiones_diamante", muscle: "pecho", equipment: ["peso_corporal"] },
+  // ─── GLUTES ──────────────────────────────────────────────
+  { slug: "hip_thrust",                  name: "hip_thrust",                    muscle: "glutes",    equipment: ["gym"] },
+  { slug: "barbell_hip_thrust",          name: "hip_thrust_barra",              muscle: "glutes",    equipment: ["gym"] },
+  { slug: "cable_kickback",              name: "patada_gluteo_polea",           muscle: "glutes",    equipment: ["gym"] },
+  { slug: "cable_abduction",             name: "abduccion_polea",               muscle: "glutes",    equipment: ["gym"] },
+  { slug: "dumbbell_hip_thrust",         name: "hip_thrust_mancuerna",          muscle: "glutes",    equipment: ["dumbbells"] },
+  { slug: "romanian_deadlift_glutes",    name: "peso_muerto_rumano_gluteos",    muscle: "glutes",    equipment: ["dumbbells"] },
+  { slug: "dumbbell_lunge_glute",        name: "zancadas_gluteo_mancuernas",    muscle: "glutes",    equipment: ["dumbbells"] },
+  { slug: "glute_bridge",                name: "puente_gluteos",                muscle: "glutes",    equipment: ["bodyweight"] },
+  { slug: "single_leg_glute_bridge",     name: "puente_gluteos_una_pierna",     muscle: "glutes",    equipment: ["bodyweight"] },
+  { slug: "sumo_squat",                  name: "sentadilla_sumo",               muscle: "glutes",    equipment: ["bodyweight"] },
+  { slug: "quadruped_kickback",          name: "patada_gluteo_cuadrupedia",     muscle: "glutes",    equipment: ["bodyweight"] },
+  { slug: "band_kickback",               name: "patada_gluteo_bandas",          muscle: "glutes",    equipment: ["bands"] },
+  { slug: "band_abduction",              name: "abduccion_bandas",              muscle: "glutes",    equipment: ["bands"] },
+  { slug: "band_hip_thrust",             name: "hip_thrust_bandas",             muscle: "glutes",    equipment: ["bands"] },
+  { slug: "monster_walk",                name: "monster_walk",                  muscle: "glutes",    equipment: ["bands"] },
 
-  { name: "press_bandas", muscle: "pecho", equipment: ["bandas"] },
-
-  /* -------- ESPALDA -------- */
-
-  { name: "dominadas", muscle: "espalda", equipment: ["peso_corporal", "gym"] },
-
-  { name: "remo_barra", muscle: "espalda", equipment: ["gym"] },
-
-  { name: "remo_mancuernas", muscle: "espalda", equipment: ["mancuernas"] },
-
-  { name: "jalon_al_pecho", muscle: "espalda", equipment: ["gym"] },
-
-  { name: "remo_bandas", muscle: "espalda", equipment: ["bandas"] },
-
-  { name: "pullover_mancuerna", muscle: "espalda", equipment: ["mancuernas"] },
-
-  /* -------- HOMBROS -------- */
-
-  { name: "press_militar", muscle: "hombros", equipment: ["gym"] },
-
-  {
-    name: "press_hombro_mancuernas",
-    muscle: "hombros",
-    equipment: ["mancuernas"],
-  },
-
-  {
-    name: "elevaciones_laterales",
-    muscle: "hombros",
-    equipment: ["mancuernas"],
-  },
-
-  {
-    name: "elevaciones_frontales",
-    muscle: "hombros",
-    equipment: ["mancuernas"],
-  },
-
-  { name: "elevaciones_bandas", muscle: "hombros", equipment: ["bandas"] },
-
-  { name: "pike_pushups", muscle: "hombros", equipment: ["peso_corporal"] },
-
-  /* -------- BICEPS -------- */
-
-  { name: "curl_barra", muscle: "biceps", equipment: ["gym"] },
-
-  { name: "curl_mancuernas", muscle: "biceps", equipment: ["mancuernas"] },
-
-  { name: "curl_martillo", muscle: "biceps", equipment: ["mancuernas"] },
-
-  { name: "curl_bandas", muscle: "biceps", equipment: ["bandas"] },
-
-  { name: "chinups", muscle: "biceps", equipment: ["peso_corporal"] },
-
-  /* -------- TRICEPS -------- */
-
-  {
-    name: "fondos_triceps",
-    muscle: "triceps",
-    equipment: ["peso_corporal", "gym"],
-  },
-
-  {
-    name: "extension_triceps_mancuerna",
-    muscle: "triceps",
-    equipment: ["mancuernas"],
-  },
-
-  { name: "extension_triceps_polea", muscle: "triceps", equipment: ["gym"] },
-
-  { name: "patada_triceps", muscle: "triceps", equipment: ["mancuernas"] },
-
-  {
-    name: "extension_triceps_bandas",
-    muscle: "triceps",
-    equipment: ["bandas"],
-  },
-
-  /* -------- PIERNAS -------- */
-
-  {
-    name: "sentadilla",
-    muscle: "piernas",
-    equipment: ["gym", "peso_corporal"],
-  },
-
-  { name: "sentadilla_goblet", muscle: "piernas", equipment: ["mancuernas"] },
-
-  { name: "prensa", muscle: "piernas", equipment: ["gym"] },
-
-  {
-    name: "peso_muerto_rumano",
-    muscle: "piernas",
-    equipment: ["gym", "mancuernas"],
-  },
-
-  {
-    name: "zancadas",
-    muscle: "piernas",
-    equipment: ["mancuernas", "peso_corporal"],
-  },
-
-  { name: "sentadilla_bandas", muscle: "piernas", equipment: ["bandas"] },
-
-  { name: "extension_cuadriceps", muscle: "piernas", equipment: ["gym"] },
-
-  { name: "curl_femoral", muscle: "piernas", equipment: ["gym"] },
-
-  {
-    name: "elevacion_talones",
-    muscle: "piernas",
-    equipment: ["peso_corporal", "gym"],
-  },
-
-  /* -------- GLUTEOS -------- */
-
-  { name: "hip_thrust", muscle: "gluteos", equipment: ["gym"] },
-
-  { name: "puente_gluteos", muscle: "gluteos", equipment: ["peso_corporal"] },
-
-  { name: "patada_gluteo_bandas", muscle: "gluteos", equipment: ["bandas"] },
-
-  { name: "patada_gluteo_polea", muscle: "gluteos", equipment: ["gym"] },
-
-  /* -------- CORE -------- */
-
-  { name: "crunch_abdominal", muscle: "core", equipment: ["peso_corporal"] },
-
-  { name: "plancha", muscle: "core", equipment: ["peso_corporal"] },
-
-  { name: "elevaciones_piernas", muscle: "core", equipment: ["peso_corporal"] },
-
-  { name: "rueda_abdominal", muscle: "core", equipment: ["peso_corporal"] },
-
-  { name: "crunch_bandas", muscle: "core", equipment: ["bandas"] },
+  // ─── CORE ────────────────────────────────────────────────
+  { slug: "crunch",                      name: "crunch_abdominal",              muscle: "core",      equipment: ["bodyweight"] },
+  { slug: "plank",                       name: "plancha",                       muscle: "core",      equipment: ["bodyweight"] },
+  { slug: "leg_raise",                   name: "elevaciones_piernas",           muscle: "core",      equipment: ["bodyweight"] }, // ← era elevacion_piernas
+  { slug: "ab_wheel_rollout",            name: "rueda_abdominal",               muscle: "core",      equipment: ["bodyweight"] }, // ← era ab_wheel
+  { slug: "mountain_climber",            name: "mountain_climber",              muscle: "core",      equipment: ["bodyweight"] },
+  { slug: "hollow_hold",                 name: "hollow_body",                   muscle: "core",      equipment: ["bodyweight"] }, // ← era hollow_hold
+  { slug: "sit_up",                      name: "sit_ups",                       muscle: "core",      equipment: ["bodyweight"] }, // ← era flutter_kick/crunch_inverso
+  { slug: "side_plank",                  name: "plancha_lateral",               muscle: "core",      equipment: ["bodyweight"] },
+  { slug: "band_crunch",                 name: "crunch_bandas",                 muscle: "core",      equipment: ["bands"] },
+  { slug: "band_plank_row",              name: "plancha_con_fila_bandas",       muscle: "core",      equipment: ["bands"] }, // ← era elevacion_piernas_bandas
+  { slug: "band_rotation",               name: "rotacion_con_bandas",           muscle: "core",      equipment: ["bands"] }, // ← nuevo, estaba en BD
+  { slug: "cable_crunch",                name: "crunch_polea",                  muscle: "core",      equipment: ["gym"] },
+  { slug: "hanging_leg_raise",           name: "elevaciones_piernas_barra",     muscle: "core",      equipment: ["gym"] }, // ← era elevacion_piernas_colgado
+  { slug: "russian_twist",               name: "rotacion_russa_con_disco",      muscle: "core",      equipment: ["gym"] }, // ← nuevo, estaba en BD
 ];
