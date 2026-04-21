@@ -1,4 +1,5 @@
-const exercisesDB = require("../data/exercises.mock");
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
 
 function normalize(str = "") {
   return str
@@ -7,42 +8,83 @@ function normalize(str = "") {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-async function getByMuscle(muscleParam, equipmentParam) {
-  let results = exercisesDB.filter((item) => item.muscle === muscleParam);
+ async function getByMuscle(muscleParam, equipmentParam) {
+  // Si muscleParam contiene comas, dividir en múltiples músculos
+  const muscles = muscleParam.includes(",") 
+    ? muscleParam.split(",").map(m => m.trim().toLowerCase())
+    : [muscleParam.toLowerCase()];
+  
+  // Buscar ejercicios que tengan cualquiera de estos músculos
+  const all = await prisma.exercise.findMany({
+    where: {
+      muscle: {
+        in: muscles
+      }
+    }
+  });
 
-  if (equipmentParam && equipmentParam.length > 0) {
-    results = results.filter((item) =>
-      item.equipment.some((eq) => equipmentParam.includes(eq)),
-    );
-  }
+  if (!equipmentParam || equipmentParam.length === 0) return all;
 
-  return results;
+  return all.filter((item) =>
+    item.equipment.some((eq) => equipmentParam.includes(eq)),
+  );
+}
+
+ async function getByMuscles(musclesArray, equipmentParam) {
+  const all = await prisma.exercise.findMany({
+    where: {
+      muscle: {
+        in: musclesArray
+      }
+    }
+  });
+
+  if (!equipmentParam || equipmentParam.length === 0) return all;
+
+  return all.filter((item) =>
+    item.equipment.some((eq) => equipmentParam.includes(eq)),
+  );
 }
 
 async function getAll() {
-  return exercisesDB;
+  return prisma.exercise.findMany({ orderBy: { muscle: "asc" } });
 }
 
-async function getAll() {
-  return exercisesDB;
+async function getByName(name) {
+  return prisma.exercise.findUnique({ where: { name } });
 }
 
 async function create({ name, muscle, equipment }) {
   const nameNorm = normalize(name);
-  const exists = exercisesDB.some((ex) => normalize(ex.name) === nameNorm);
+  const existing = await prisma.exercise.findMany();
+  const exists = existing.some((ex) => normalize(ex.name) === nameNorm);
+
   if (exists) {
     const err = new Error("Nombre duplicado");
     err.code = "DUPLICATE_NAME";
     err.name = name;
     throw err;
   }
-  const newExercise = {
-    name: name.trim().toLowerCase().replace(/\s+/g, "_"),
-    muscle: muscle.trim().toLowerCase(),
-    equipment: equipment.map((e) => e.trim().toLowerCase()),
-  };
-  exercisesDB.push(newExercise);
-  return newExercise;
+
+  return prisma.exercise.create({
+    data: {
+      name: name.trim().toLowerCase().replace(/\s+/g, "_"),
+      muscle: muscle.trim().toLowerCase(),
+      equipment: equipment.map((e) => e.trim().toLowerCase()),
+      imageUrl: null,
+      gifUrl: null,
+    },
+  });
 }
 
-module.exports = { getByMuscle, getAll, create };
+async function updateMedia(name, { imageUrl, gifUrl }) {
+  return prisma.exercise.update({
+    where: { name },
+    data: {
+      ...(imageUrl !== undefined && { imageUrl }),
+      ...(gifUrl !== undefined && { gifUrl }),
+    },
+  });
+}
+
+module.exports = { getByMuscle, getByMuscles, getAll, getByName, create, updateMedia };

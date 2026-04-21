@@ -17,10 +17,9 @@ const prisma = new PrismaClient();
 const exercisesDB = require("../data/exercises.mock");
 
 exports.generateRoutine = async (userId, payload) => {
-  const { modo, objetivo, nivel, equipamiento, rutina, ejercicios } = payload;
+  const { modo, objetivo, nivel, equipamiento, rutina } = payload;
 
-  let exercises;
-
+  // quick: la IA genera la rutina desde el engine
   if (modo === "quick") {
     const rutinaBase = generarRutina(payload);
     const rutinaConIA = await aiService.generateRoutine({
@@ -28,41 +27,103 @@ exports.generateRoutine = async (userId, payload) => {
       exercises: rutinaBase.exercises,
     });
 
-    exercises = rutinaConIA.routine.exercises.map((ex) => {
+    const exercises = rutinaConIA.routine.exercises.map((ex) => {
       const found = exercisesDB.find((e) => e.name === ex.name);
       return { ...ex, muscle: found?.muscle ?? null };
     });
-  } else {
-    exercises = ejercicios;
+
+    return await _saveRoutine(userId, {
+      name: rutina ?? "Mi rutina",
+      modo,
+      objetivo,
+      nivel,
+      equipamiento,
+      split: rutina ?? null,
+      exercises,
+    });
   }
 
-  const routine = await prisma.routine.create({
+  // custom: el usuario ya armó la rutina, solo guardamos
+  const { customSubMode } = payload;
+
+  if (customSubMode === "single") {
+    // aplanamos ejerciciosPorMusculo en un array ordenado
+    const exercises = Object.values(payload.ejerciciosPorMusculo).flat();
+    return await _saveRoutine(userId, {
+      name: rutina ?? "Mi rutina",
+      modo,
+      objetivo,
+      nivel,
+      equipamiento,
+      split: null,
+      exercises,
+    });
+  }
+
+  if (customSubMode === "plan") {
+    // una rutina por día, devolvemos array
+    const routines = [];
+    for (const dayPlan of payload.ejercicios) {
+      const dayLabel = dayPlan.day.charAt(0).toUpperCase() + dayPlan.day.slice(1);
+      const muscleLabel = payload.planSemanal
+        .find((p) => p.day === dayPlan.day)
+        ?.muscles?.join("/") ?? dayPlan.day;
+      const name = `${muscleLabel.charAt(0).toUpperCase() + muscleLabel.slice(1)} - ${dayLabel}`;
+
+      const saved = await _saveRoutine(userId, {
+        name,
+        modo,
+        objetivo,
+        nivel,
+        equipamiento,
+        split: muscleLabel,
+        exercises: dayPlan.exercises,
+      });
+      routines.push(saved);
+    }
+    return routines;
+  }
+
+  throw new Error("INVALID_PAYLOAD");
+};
+
+// helper interno, no lo exportes
+async function _saveRoutine(userId, { name, modo, objetivo, nivel, equipamiento, split, exercises }) {
+  const exerciseNames = exercises.map((e) => e.name);
+  const catalog = await prisma.exercise.findMany({
+    where: { name: { in: exerciseNames } },
+    select: { name: true, imageUrl: true, gifUrl: true },
+  });
+  const mediaByName = Object.fromEntries(
+    catalog.map((e) => [e.name, { imageUrl: e.imageUrl, gifUrl: e.gifUrl }])
+  );
+
+  return prisma.routine.create({
     data: {
       userId,
-      name: rutina ?? "Mi rutina",
+      name,
       mode: modo,
       goal: objetivo,
       experience: nivel,
       equipment: equipamiento,
-      split: rutina ?? null,
+      split: split ?? null,
       exercises: {
         create: exercises.map((ex, index) => ({
           name: ex.name,
           muscle: ex.muscle ?? null,
           sets: ex.sets,
-          reps: ex.reps,
+          reps: String(ex.reps),
           restSeconds: ex.restSeconds,
           weight: ex.weight ?? null,
           order: index,
+          imageUrl: mediaByName[ex.name]?.imageUrl ?? null,
+          gifUrl: mediaByName[ex.name]?.gifUrl ?? null,
         })),
       },
     },
     include: { exercises: { orderBy: { order: "asc" } } },
   });
-
-  return routine;
-};
-
+}
 exports.completeSession = async (userId, payload) => {
   const {
     routineId,
@@ -234,11 +295,13 @@ exports.applyPendingAdjustments = async (userId, routineId, notificationId) => {
 };
 
 exports.getUserRoutines = async (userId) => {
-  return await prisma.routine.findMany({
+  const routines = await prisma.routine.findMany({
     where: { userId },
     include: { exercises: { orderBy: { order: "asc" } } },
     orderBy: { createdAt: "desc" },
   });
+
+  return routines;
 };
 
 exports.getRoutineProgress = async (userId, routineId) => {
@@ -292,19 +355,71 @@ exports.deleteRoutine = async (userId, routineId) => {
 };
 
 exports.replaceExercise = async (userId, routineId, exerciseName, newName) => {
+  console.log("[replaceExercise] userId:", userId, "routineId:", routineId);
+  console.log(
+    "[replaceExercise] exerciseName:",
+    exerciseName,
+    "newName:",
+    newName,
+  );
+
   const routine = await prisma.routine.findFirst({
     where: { id: routineId, userId },
   });
   if (!routine) throw new Error("NOT_FOUND");
 
-  const updated = await prisma.routineExercise.updateMany({
+  // Verificar que el ejercicio existe en la rutina ANTES de buscar en catálogo
+  const existingExercise = await prisma.routineExercise.findFirst({
     where: { routineId, name: exerciseName },
-    data: { name: newName },
   });
 
-  if (updated.count === 0) throw new Error("EXERCISE_NOT_FOUND");
+  console.log(
+    "[replaceExercise] existingExercise en rutina:",
+    existingExercise?.name ?? "NO ENCONTRADO",
+  );
 
-  return { replaced: exerciseName, with: newName };
+  if (!existingExercise) throw new Error("EXERCISE_NOT_FOUND");
+
+  // Buscar imageUrl y gifUrl del nuevo ejercicio en el catálogo
+  const catalogExercise = await prisma.exercise.findUnique({
+    where: { name: newName },
+    select: { name: true, imageUrl: true, gifUrl: true },
+  });
+
+  console.log(
+    "[replaceExercise] catalogExercise:",
+    catalogExercise?.name ?? "NO ENCONTRADO EN CATALOGO",
+  );
+
+  await prisma.routineExercise.updateMany({
+    where: { routineId, name: exerciseName },
+    data: {
+      name: newName,
+      imageUrl: catalogExercise?.imageUrl ?? null,
+      gifUrl: catalogExercise?.gifUrl ?? null,
+    },
+  });
+
+  const updatedExercise = await prisma.routineExercise.findFirst({
+    where: { routineId, name: newName },
+  });
+
+  console.log(
+    "[replaceExercise] updatedExercise:",
+    updatedExercise?.name,
+    "imageUrl:",
+    updatedExercise?.imageUrl,
+  );
+  // En routine.service.js, al final de replaceExercise, antes del return:
+  console.log(
+    "[replaceExercise] FINAL updatedExercise:",
+    JSON.stringify(updatedExercise),
+  );
+  return {
+    replaced: exerciseName,
+    with: newName,
+    exercise: updatedExercise,
+  };
 };
 
 exports.getStagnationAnalysis = async (userId, routineId) => {

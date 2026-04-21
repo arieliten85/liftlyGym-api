@@ -46,6 +46,8 @@ model RoutineExercise {
   restSeconds Int
   weight      Float?
   order       Int
+  imageUrl  String?    
+  gifUrl    String?    
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -104,4 +106,16 @@ model Notification {
   read               Boolean  @default(false)
   pendingAdjustments Json?   
   createdAt          DateTime @default(now())
+}
+
+
+model Exercise {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  muscle     String
+  equipment  String[]
+  imageUrl   String?
+  gifUrl     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
