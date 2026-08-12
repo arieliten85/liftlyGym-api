@@ -11,6 +11,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use((req, res, next) => {
+  const startedAt = Date.now();
+  res.on("finish", () => {
+    console.log(
+      `${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - startedAt}ms`,
+    );
+  });
+  next();
+});
 
 app.use("/api/routines", routineRoutes);
 app.use("/api/auth", authRoutes);
