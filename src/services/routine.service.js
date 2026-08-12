@@ -1,5 +1,6 @@
 const aiService = require("../ai/openIA.service");
 const { generarRutina } = require("../engine/routine.engine");
+const exerciseService = require("./exercise.service");
 const notificationService = require("./notification.service");
 const prisma = require("../lib/prisma");
 
@@ -13,23 +14,41 @@ const {
   applyAdjustments,
   buildAdjustmentNotification,
 } = require("../helpers/routine/adjustment.helper");
-const exercisesDB = require("../data/exercises.mock");
-
 exports.generateRoutine = async (userId, payload) => {
   const { modo, objetivo, nivel, equipamiento, rutina } = payload;
 
   // quick: la IA genera la rutina desde el engine
   if (modo === "quick") {
-    const rutinaBase = generarRutina(payload);
+    const rutinaBase = await generarRutina(payload);
+    if (rutinaBase.exercises.length === 0) {
+      throw new Error("EXERCISE_PROVIDER_EMPTY");
+    }
     const rutinaConIA = await aiService.generateRoutine({
       ...payload,
       exercises: rutinaBase.exercises,
     });
 
-    const exercises = rutinaConIA.routine.exercises.map((ex) => {
-      const found = exercisesDB.find((e) => e.name === ex.name);
-      return { ...ex, muscle: found?.muscle ?? null };
-    });
+    const exercises = rutinaConIA.routine.exercises
+      .map((exercise) => {
+        const catalogExercise = rutinaBase.exercises.find(
+          (candidate) =>
+            candidate.name.toLowerCase() === exercise.name.toLowerCase(),
+        );
+        if (!catalogExercise) return null;
+        return {
+          ...exercise,
+          externalExerciseId: catalogExercise.externalExerciseId,
+          muscle: catalogExercise.muscle,
+          imageUrl: catalogExercise.imageUrl,
+          videoUrl: catalogExercise.videoUrl,
+          instructions: catalogExercise.instructions,
+        };
+      })
+      .filter(Boolean);
+
+    if (exercises.length === 0) {
+      throw new Error("INVALID_AI_EXERCISES");
+    }
 
     return await _saveRoutine(userId, {
       name: rutina ?? "Mi rutina",
@@ -88,16 +107,7 @@ exports.generateRoutine = async (userId, payload) => {
 
 // helper interno, no lo exportes
 async function _saveRoutine(userId, { name, modo, objetivo, nivel, equipamiento, split, exercises }) {
-  const exerciseNames = exercises.map((e) => e.name);
-  const catalog = await prisma.exercise.findMany({
-    where: { name: { in: exerciseNames } },
-    select: { name: true, imageUrl: true, gifUrl: true },
-  });
-  const mediaByName = Object.fromEntries(
-    catalog.map((e) => [e.name, { imageUrl: e.imageUrl, gifUrl: e.gifUrl }])
-  );
-
-  return prisma.routine.create({
+  const savedRoutine = await prisma.routine.create({
     data: {
       userId,
       name,
@@ -108,6 +118,7 @@ async function _saveRoutine(userId, { name, modo, objetivo, nivel, equipamiento,
       split: split ?? null,
       exercises: {
         create: exercises.map((ex, index) => ({
+          externalExerciseId: ex.externalExerciseId ?? ex.id ?? null,
           name: ex.name,
           muscle: ex.muscle ?? null,
           sets: ex.sets,
@@ -115,13 +126,24 @@ async function _saveRoutine(userId, { name, modo, objetivo, nivel, equipamiento,
           restSeconds: ex.restSeconds,
           weight: ex.weight ?? null,
           order: index,
-          imageUrl: mediaByName[ex.name]?.imageUrl ?? null,
-          gifUrl: mediaByName[ex.name]?.gifUrl ?? null,
+          // ExerciseDB rotates media URLs weekly. Only its stable ID is persisted.
+          imageUrl: null,
+          gifUrl: null,
         })),
       },
     },
     include: { exercises: { orderBy: { order: "asc" } } },
   });
+
+  return {
+    ...savedRoutine,
+    exercises: savedRoutine.exercises.map((savedExercise, index) => ({
+      ...savedExercise,
+      imageUrl: exercises[index]?.imageUrl ?? null,
+      videoUrl: exercises[index]?.videoUrl ?? null,
+      instructions: exercises[index]?.instructions ?? [],
+    })),
+  };
 }
 exports.completeSession = async (userId, payload) => {
   const {
@@ -194,77 +216,92 @@ exports.completeSession = async (userId, payload) => {
 
   // si abandonó no tiene sentido ajustar nada, avisamos y listo
   if (wasAbandoned) {
-    await notificationService.createNotification(userId, {
-      title: "Sesión registrada",
-      body: `Registramos tu sesión de "${routine.name}". Completá una sesión entera para activar los ajustes de la IA.`,
-      type: "info",
-      routineId,
+    try {
+      await notificationService.createNotification(userId, {
+        title: "Sesión registrada",
+        body: `Registramos tu sesión de "${routine.name}". Completá una sesión entera para activar los ajustes de la IA.`,
+        type: "info",
+        routineId,
+      });
+    } catch (error) {
+      console.error(
+        "[completeSession] Failed to create abandonment notification:",
+        error.message,
+      );
+    }
+    return { session, adjustments: null };
+  }
+
+  try {
+    const summary = buildSessionSummary(routine.exercises, session.exercises);
+
+    const sessionCount = await prisma.workoutSession.count({
+      where: { routineId, wasAbandoned: false },
     });
+
+    const shouldAdjust = await shouldAdjustRoutine(
+      routine,
+      sessionCount,
+      summary,
+      wantsFasterAdjustments,
+    );
+
+    if (!shouldAdjust) {
+      return { session, adjustments: null };
+    }
+
+    // llegamos acá = hay algo para ajustar, le preguntamos a la IA
+    const aiResult = await aiService.adjustRoutine({
+      goal: routine.goal,
+      experience: routine.experience,
+      sessionCount,
+      feedback,
+      summary,
+    });
+    const adjustments = aiResult?.adjustments ?? [];
+
+    const { minorAdjustments, majorAdjustments } =
+      classifyAdjustments(adjustments);
+    const previousValues = buildPreviousValues(routine.exercises, adjustments);
+
+    const { title, body, adjustmentType } = buildAdjustmentNotification(
+      adjustments,
+      previousValues,
+      summary,
+      feedback,
+      routine.name,
+      majorAdjustments.length,
+    );
+
+    // guardamos los ajustes como pendientes, el usuario decide si los aplica
+    const pendingAdjustments =
+      adjustments.length > 0
+        ? adjustments.map((adj) => ({
+            ...adj,
+            previous: previousValues[adj.name] ?? null,
+            type: majorAdjustments.some((m) => m.name === adj.name)
+              ? "major"
+              : "minor",
+          }))
+        : null;
+
+    await notificationService.createNotification(userId, {
+      title,
+      body,
+      type: adjustments.length > 0 ? "success" : "info",
+      routineId,
+      pendingAdjustments,
+      adjustmentType,
+    });
+
+    return { session, adjustments };
+  } catch (error) {
+    console.error(
+      "[completeSession] Post-session adjustment failed:",
+      error.message,
+    );
     return { session, adjustments: null };
   }
-
-  const summary = buildSessionSummary(routine.exercises, session.exercises);
-
-  const sessionCount = await prisma.workoutSession.count({
-    where: { routineId, wasAbandoned: false },
-  });
-
-  const shouldAdjust = await shouldAdjustRoutine(
-    routine,
-    sessionCount,
-    summary,
-    wantsFasterAdjustments,
-  );
-
-  if (!shouldAdjust) {
-    return { session, adjustments: null };
-  }
-
-  // llegamos acá = hay algo para ajustar, le preguntamos a la IA
-  const aiResult = await aiService.adjustRoutine({
-    goal: routine.goal,
-    experience: routine.experience,
-    sessionCount,
-    feedback,
-    summary,
-  });
-  const adjustments = aiResult?.adjustments ?? [];
-
-  const { minorAdjustments, majorAdjustments } =
-    classifyAdjustments(adjustments);
-  const previousValues = buildPreviousValues(routine.exercises, adjustments);
-
-  const { title, body, adjustmentType } = buildAdjustmentNotification(
-    adjustments,
-    previousValues,
-    summary,
-    feedback,
-    routine.name,
-    majorAdjustments.length,
-  );
-
-  // guardamos los ajustes como pendientes, el usuario decide si los aplica
-  const pendingAdjustments =
-    adjustments.length > 0
-      ? adjustments.map((adj) => ({
-          ...adj,
-          previous: previousValues[adj.name] ?? null,
-          type: majorAdjustments.some((m) => m.name === adj.name)
-            ? "major"
-            : "minor",
-        }))
-      : null;
-
-  await notificationService.createNotification(userId, {
-    title,
-    body,
-    type: adjustments.length > 0 ? "success" : "info",
-    routineId,
-    pendingAdjustments,
-    adjustmentType,
-  });
-
-  return { session, adjustments };
 };
 
 exports.applyPendingAdjustments = async (userId, routineId, notificationId) => {
@@ -300,7 +337,41 @@ exports.getUserRoutines = async (userId) => {
     orderBy: { createdAt: "desc" },
   });
 
-  return routines;
+  const externalIds = routines.flatMap((routine) =>
+    routine.exercises.map((exercise) => exercise.externalExerciseId),
+  );
+
+  let providerExercises = [];
+  if (externalIds.some(Boolean)) {
+    try {
+      providerExercises = await exerciseService.getByIds(externalIds);
+    } catch (error) {
+      console.error(
+        "[getUserRoutines] ExerciseDB media unavailable:",
+        error.code ?? error.name,
+      );
+    }
+  }
+  const providerById = new Map(
+    providerExercises.map((exercise) => [
+      exercise.externalExerciseId,
+      exercise,
+    ]),
+  );
+
+  return routines.map((routine) => ({
+    ...routine,
+    exercises: routine.exercises.map((exercise) => {
+      const providerExercise = providerById.get(exercise.externalExerciseId);
+      if (!providerExercise) return exercise;
+      return {
+        ...exercise,
+        imageUrl: providerExercise.imageUrl,
+        videoUrl: providerExercise.videoUrl,
+        instructions: providerExercise.instructions,
+      };
+    }),
+  }));
 };
 
 exports.getRoutineProgress = async (userId, routineId) => {
@@ -353,7 +424,12 @@ exports.deleteRoutine = async (userId, routineId) => {
   return true;
 };
 
-exports.replaceExercise = async (userId, routineId, exerciseName, newName) => {
+exports.replaceExercise = async (
+  userId,
+  routineId,
+  exerciseName,
+  newExternalExerciseId,
+) => {
   const routine = await prisma.routine.findFirst({
     where: { id: routineId, userId },
   });
@@ -366,29 +442,34 @@ exports.replaceExercise = async (userId, routineId, exerciseName, newName) => {
 
   if (!existingExercise) throw new Error("EXERCISE_NOT_FOUND");
 
-  // Buscar imageUrl y gifUrl del nuevo ejercicio en el catálogo
-  const catalogExercise = await prisma.exercise.findUnique({
-    where: { name: newName },
-    select: { name: true, imageUrl: true, gifUrl: true },
-  });
+  const providerExercise = await exerciseService.getById(
+    newExternalExerciseId,
+  );
 
   await prisma.routineExercise.updateMany({
     where: { routineId, name: exerciseName },
     data: {
-      name: newName,
-      imageUrl: catalogExercise?.imageUrl ?? null,
-      gifUrl: catalogExercise?.gifUrl ?? null,
+      externalExerciseId: providerExercise.externalExerciseId,
+      name: providerExercise.name,
+      muscle: providerExercise.muscle,
+      imageUrl: null,
+      gifUrl: null,
     },
   });
 
   const updatedExercise = await prisma.routineExercise.findFirst({
-    where: { routineId, name: newName },
+    where: { routineId, name: providerExercise.name },
   });
 
   return {
     replaced: exerciseName,
-    with: newName,
-    exercise: updatedExercise,
+    with: providerExercise.name,
+    exercise: {
+      ...updatedExercise,
+      imageUrl: providerExercise.imageUrl,
+      videoUrl: providerExercise.videoUrl,
+      instructions: providerExercise.instructions,
+    },
   };
 };
 

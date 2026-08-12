@@ -1,40 +1,62 @@
-const exercisesDB = require("../data/exercises.mock");
+const exerciseService = require("../services/exercise.service");
 
-function esCompuesto(nombre) {
-  const compuestos = ["press", "sentadilla", "peso_muerto", "dominadas", "remo", "prensa", "hip_thrust", "zancadas"];
-  return compuestos.some((p) => nombre.includes(p));
+function isCompound(exerciseName) {
+  const normalized = exerciseName.toLowerCase();
+  const compoundPatterns = [
+    "press",
+    "squat",
+    "deadlift",
+    "pull-up",
+    "pull up",
+    "row",
+    "lunge",
+    "hip thrust",
+  ];
+  return compoundPatterns.some((pattern) => normalized.includes(pattern));
 }
 
-function seleccionarEjercicios({ musculos, equipamiento, volumen }) {
-  // Ya no necesita mapeo — los valores coinciden directo
-  const filtrados = exercisesDB.filter(
-    (e) =>
-      musculos.includes(e.muscle) &&
-      e.equipment.includes(equipamiento),
+function shuffle(exercises) {
+  return [...exercises].sort(() => 0.5 - Math.random());
+}
+
+async function seleccionarEjercicios({ musculos, equipamiento, volumen }) {
+  const availableExercises = await exerciseService.getByMuscles(
+    musculos,
+    equipamiento,
   );
 
-  if (filtrados.length === 0) {
-    console.warn(`[engine] No exercises — musculos: ${musculos}, equipamiento: ${equipamiento}`);
+  if (availableExercises.length === 0) {
+    console.warn(
+      `[engine] ExerciseDB returned no exercises — muscles: ${musculos.join(",")}, equipment: ${equipamiento}`,
+    );
     return [];
   }
 
-  const compuestos = filtrados.filter((e) => esCompuesto(e.name));
-  const rutina = [];
+  const routine = [];
+  const usedIds = new Set();
 
-  if (compuestos.length) {
-    rutina.push(compuestos[Math.floor(Math.random() * compuestos.length)]);
+  for (const muscle of musculos) {
+    if (routine.length >= volumen) break;
+    const muscleExercises = availableExercises.filter(
+      (exercise) => exercise.muscle === muscle,
+    );
+    const preferred =
+      muscleExercises.find((exercise) => isCompound(exercise.name)) ??
+      muscleExercises[0];
+    if (preferred && !usedIds.has(preferred.externalExerciseId)) {
+      routine.push(preferred);
+      usedIds.add(preferred.externalExerciseId);
+    }
   }
 
-  const restantes = filtrados
-    .filter((e) => !rutina.find((r) => r.name === e.name))
-    .sort(() => 0.5 - Math.random());
-
-  for (const ejercicio of restantes) {
-    if (rutina.length >= volumen) break;
-    rutina.push(ejercicio);
+  for (const exercise of shuffle(availableExercises)) {
+    if (routine.length >= volumen) break;
+    if (usedIds.has(exercise.externalExerciseId)) continue;
+    routine.push(exercise);
+    usedIds.add(exercise.externalExerciseId);
   }
 
-  return rutina;
+  return routine;
 }
 
 module.exports = { seleccionarEjercicios };

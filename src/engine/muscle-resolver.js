@@ -13,7 +13,6 @@ function resolverMusculos(payload) {
     biceps:    ["biceps"],
     triceps:   ["triceps"],
     shoulders: ["shoulders"],
-    legs:      ["legs"],
     glutes:    ["glutes"],
     core:      ["core"],
   };

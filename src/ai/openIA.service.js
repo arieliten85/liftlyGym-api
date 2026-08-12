@@ -60,12 +60,18 @@ class AIService {
       return MOCK_GENERATE;
     }
 
+    const exercises = userData.exercises.map((exercise) => ({
+      name: exercise.name,
+      muscle: exercise.muscle,
+      equipment: exercise.equipment,
+    }));
+
     const prompt = `
 Actúa como un entrenador personal profesional experto en gimnasio.
 Analiza los datos del usuario y genera una rutina optimizada con pesos base reales.
 
 Datos del usuario:
-${JSON.stringify(userData, null, 2)}
+${JSON.stringify({ ...userData, exercises }, null, 2)}
 
 Reglas para los pesos (weight):
 - Asigna un peso base REALISTA en kg según el ejercicio y nivel de experiencia
@@ -77,6 +83,7 @@ Reglas para los pesos (weight):
 
 Reglas generales:
 - Usa SOLO los ejercicios proporcionados en userData.exercises
+- Copia el nombre de cada ejercicio EXACTAMENTE como fue proporcionado
 - Adapta intensidad según experiencia
 
 Devuelve SOLO JSON válido sin texto adicional.

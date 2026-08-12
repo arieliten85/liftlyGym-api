@@ -5,7 +5,15 @@ exports.generateRoutine = async (req, res) => {
     const routine = await routineService.generateRoutine(req.user.id, req.body);
     res.status(201).json({ success: true, data: routine });
   } catch (error) {
-    console.error(error);
+    console.error("[generateRoutine]", error.code ?? error.message);
+    if (
+      error.code?.startsWith("EXERCISE_PROVIDER_") ||
+      error.message === "EXERCISE_PROVIDER_EMPTY"
+    ) {
+      return res.status(503).json({
+        error: "El catálogo de ejercicios no está disponible en este momento",
+      });
+    }
     res.status(500).json({ error: "Error interno del servidor" });
   }
 };
@@ -87,19 +95,32 @@ exports.applyPendingAdjustments = async (req, res) => {
 exports.replaceExercise = async (req, res) => {
   try {
     const { id } = req.params;
-    const { exerciseName, newName } = req.body;
-    if (!exerciseName || !newName) {
-      return res.status(400).json({ error: "exerciseName y newName requeridos" });
+    const { exerciseName, newExternalExerciseId } = req.body;
+    if (!exerciseName || !newExternalExerciseId) {
+      return res.status(400).json({
+        error: "exerciseName y newExternalExerciseId requeridos",
+      });
     }
-    const result = await routineService.replaceExercise(req.user.id, id, exerciseName, newName);
+    const result = await routineService.replaceExercise(
+      req.user.id,
+      id,
+      exerciseName,
+      newExternalExerciseId,
+    );
     res.json({ success: true, data: result });
   } catch (error) {
-    console.error(error);
+    console.error("[replaceExercise]", error.code ?? error.message);
     if (error.message === "NOT_FOUND") {
       return res.status(404).json({ error: "Rutina no encontrada" });
     }
     if (error.message === "EXERCISE_NOT_FOUND") {
       return res.status(404).json({ error: "Ejercicio no encontrado en la rutina" });
+    }
+    if (error.code?.startsWith("EXERCISE_PROVIDER_")) {
+      const status = error.code === "EXERCISE_PROVIDER_RATE_LIMIT" ? 429 : 503;
+      return res.status(status).json({
+        error: "El catálogo de ejercicios no está disponible en este momento",
+      });
     }
     res.status(500).json({ error: "Error interno del servidor" });
   }

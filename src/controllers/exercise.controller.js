@@ -1,71 +1,81 @@
 const exerciseService = require("../services/exercise.service");
+const {
+  ExerciseProviderError,
+} = require("../services/exercisedb.service");
+
+function handleExerciseError(error, res, operation) {
+  console.error(`[${operation}]`, error.code ?? error.name);
+
+  if (error instanceof ExerciseProviderError) {
+    const status =
+      error.code === "INVALID_EXERCISE_ID"
+        ? 400
+        : error.code === "EXERCISE_PROVIDER_RATE_LIMIT"
+          ? 429
+          : error.status === 404
+            ? 404
+            : 503;
+    return res.status(status).json({ success: false, message: error.message });
+  }
+
+  return res
+    .status(500)
+    .json({ success: false, message: "Error interno" });
+}
 
 const getByMuscle = async (req, res) => {
   try {
     const { muscle, equipment } = req.query;
-    if (!muscle) {
-      return res.status(400).json({ success: false, message: "Se requiere el parámetro muscle" });
+    if (!muscle || typeof muscle !== "string") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Se requiere el parámetro muscle" });
     }
-    const exercises = await exerciseService.getByMuscle(muscle, equipment?.split(","));
-    res.status(200).json({ success: true, data: exercises });
+
+    const exercises = await exerciseService.getByMuscle(muscle, equipment);
+    return res.status(200).json({ success: true, data: exercises });
   } catch (error) {
-    console.error("[getByMuscle]", error);
-    res.status(500).json({ success: false, message: "Error interno" });
+    return handleExerciseError(error, res, "getByMuscle");
   }
 };
 
- const getByMuscles = async (req, res) => {
+const getByMuscles = async (req, res) => {
   try {
     const { muscles, equipment } = req.query;
-    if (!muscles) {
-      return res.status(400).json({ success: false, message: "Se requiere el parámetro muscles" });
+    if (!muscles || typeof muscles !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Se requiere el parámetro muscles",
+      });
     }
-    const musclesArray = muscles.split(",").map(m => m.trim());
-    const exercises = await exerciseService.getByMuscles(musclesArray, equipment?.split(","));
-    res.status(200).json({ success: true, data: exercises });
+
+    const musclesArray = muscles.split(",").map((muscle) => muscle.trim());
+    const exercises = await exerciseService.getByMuscles(
+      musclesArray,
+      equipment,
+    );
+    return res.status(200).json({ success: true, data: exercises });
   } catch (error) {
-    console.error("[getByMuscles]", error);
-    res.status(500).json({ success: false, message: "Error interno" });
+    return handleExerciseError(error, res, "getByMuscles");
   }
 };
 
-const getAll = async (req, res) => {
+const getAll = async (_req, res) => {
   try {
     const exercises = await exerciseService.getAll();
-    res.status(200).json({ success: true, data: exercises });
+    return res.status(200).json({ success: true, data: exercises });
   } catch (error) {
-    console.error("[getAll]", error);
-    res.status(500).json({ success: false, message: "Error interno" });
+    return handleExerciseError(error, res, "getAll");
   }
 };
 
-const createExercise = async (req, res) => {
+const getById = async (req, res) => {
   try {
-    const { name, muscle, equipment } = req.body;
-    const exercise = await exerciseService.create({ name, muscle, equipment });
-    res.status(201).json({ success: true, data: exercise });
+    const exercise = await exerciseService.getById(req.params.exerciseId);
+    return res.status(200).json({ success: true, data: exercise });
   } catch (error) {
-    console.error("[createExercise]", error);
-    if (error.code === "DUPLICATE_NAME") {
-      return res.status(400).json({ success: false, message: "Nombre duplicado" });
-    }
-    res.status(500).json({ success: false, message: "Error interno" });
+    return handleExerciseError(error, res, "getById");
   }
 };
 
-const updateExerciseMedia = async (req, res) => {
-  try {
-    const { name } = req.params;
-    const { imageUrl, gifUrl } = req.body;
-    if (!imageUrl && !gifUrl) {
-      return res.status(400).json({ success: false, message: "Debe enviar imageUrl o gifUrl" });
-    }
-    const updated = await exerciseService.updateMedia(name, { imageUrl, gifUrl });
-    res.status(200).json({ success: true, data: updated });
-  } catch (error) {
-    console.error("[updateExerciseMedia]", error);
-    res.status(500).json({ success: false, message: "Error interno" });
-  }
-};
-
-module.exports = { getByMuscle, getByMuscles, getAll, createExercise, updateExerciseMedia };
+module.exports = { getByMuscle, getByMuscles, getAll, getById };

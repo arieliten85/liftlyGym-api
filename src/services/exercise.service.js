@@ -1,92 +1,110 @@
-const prisma = require("../lib/prisma");
-const fallbackExercises = require("../data/exercises.mock");
+const exercisedbService = require("./exercisedb.service");
+const localExercises = require("../data/exercises.mock");
 
-function normalize(str = "") {
-  return str
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+function canUseLocalFallback(error) {
+  return (
+    error?.code === "EXERCISE_PROVIDER_NOT_CONFIGURED" ||
+    error?.code === "EXERCISE_PROVIDER_UNAVAILABLE" ||
+    error?.code === "EXERCISE_PROVIDER_TIMEOUT" ||
+    error?.code === "EXERCISE_PROVIDER_RATE_LIMIT"
+  );
 }
 
-async function getExerciseCatalog() {
-  const exercises = await prisma.exercise.findMany({ orderBy: { muscle: "asc" } });
-  return exercises.length > 0 ? exercises : fallbackExercises;
+function equipmentMatches(exerciseEquipment = [], requestedEquipment) {
+  if (!requestedEquipment) return true;
+  if (requestedEquipment === "basic") return true;
+  return exerciseEquipment.includes(requestedEquipment);
 }
 
- async function getByMuscle(muscleParam, equipmentParam) {
-  // Si muscleParam contiene comas, dividir en múltiples músculos
-  const muscles = muscleParam.includes(",") 
-    ? muscleParam.split(",").map(m => m.trim().toLowerCase())
-    : [muscleParam.toLowerCase()];
-  
-  // Buscar ejercicios que tengan cualquiera de estos músculos
-  const all = (await getExerciseCatalog()).filter((exercise) =>
-    muscles.includes(exercise.muscle),
-  );
-
-  if (!equipmentParam || equipmentParam.length === 0) return all;
-
-  const filtered = all.filter((item) =>
-    item.equipment.some((eq) => equipmentParam.includes(eq)),
-  );
-
-  return filtered.length > 0 ? filtered : all;
+function mapLocalExercise(exercise) {
+  return {
+    id: `local:${exercise.slug}`,
+    externalExerciseId: `local:${exercise.slug}`,
+    name: exercise.name,
+    muscle: exercise.muscle,
+    equipment: exercise.equipment,
+    imageUrl: null,
+    gifUrl: null,
+    videoUrl: null,
+    instructions: [],
+    overview: null,
+    exerciseTips: [],
+    source: "local-catalog",
+  };
 }
 
- async function getByMuscles(musclesArray, equipmentParam) {
-  const muscles = musclesArray.map((muscle) => muscle.trim().toLowerCase());
-  const all = (await getExerciseCatalog()).filter((exercise) =>
-    muscles.includes(exercise.muscle),
-  );
+function getLocalByMuscles(muscles, equipment) {
+  const requestedMuscles = new Set(muscles.filter(Boolean));
+  return localExercises
+    .filter((exercise) => requestedMuscles.has(exercise.muscle))
+    .filter((exercise) => equipmentMatches(exercise.equipment, equipment))
+    .map(mapLocalExercise);
+}
 
-  if (!equipmentParam || equipmentParam.length === 0) return all;
+function getLocalById(exerciseId) {
+  const slug = String(exerciseId ?? "").replace(/^local:/, "");
+  const exercise = localExercises.find((item) => item.slug === slug);
+  return exercise ? mapLocalExercise(exercise) : null;
+}
 
-  const filtered = all.filter((item) =>
-    item.equipment.some((eq) => equipmentParam.includes(eq)),
-  );
+async function getByMuscle(muscle, equipment) {
+  return getByMuscles([muscle], equipment);
+}
 
-  return filtered.length > 0 ? filtered : all;
+async function getByMuscles(muscles, equipment) {
+  try {
+    return await exercisedbService.getByMuscles(muscles, equipment);
+  } catch (error) {
+    if (!canUseLocalFallback(error)) throw error;
+    console.warn(
+      "[exercise.service] Using local exercise fallback:",
+      error.code ?? error.name,
+    );
+    return getLocalByMuscles(muscles, equipment);
+  }
 }
 
 async function getAll() {
-  return getExerciseCatalog();
+  try {
+    return await exercisedbService.getAll();
+  } catch (error) {
+    if (!canUseLocalFallback(error)) throw error;
+    console.warn(
+      "[exercise.service] Using local exercise fallback:",
+      error.code ?? error.name,
+    );
+    return localExercises.map(mapLocalExercise);
+  }
 }
 
-async function getByName(name) {
-  return prisma.exercise.findUnique({ where: { name } });
+async function getById(exerciseId) {
+  const localExercise = getLocalById(exerciseId);
+  if (localExercise) return localExercise;
+  return exercisedbService.getById(exerciseId);
 }
 
-async function create({ name, muscle, equipment }) {
-  const nameNorm = normalize(name);
-  const existing = await prisma.exercise.findMany();
-  const exists = existing.some((ex) => normalize(ex.name) === nameNorm);
+async function getByIds(exerciseIds) {
+  const localResults = [];
+  const providerIds = [];
 
-  if (exists) {
-    const err = new Error("Nombre duplicado");
-    err.code = "DUPLICATE_NAME";
-    err.name = name;
-    throw err;
+  for (const exerciseId of exerciseIds.filter(Boolean)) {
+    const localExercise = getLocalById(exerciseId);
+    if (localExercise) localResults.push(localExercise);
+    else providerIds.push(exerciseId);
   }
 
-  return prisma.exercise.create({
-    data: {
-      name: name.trim().toLowerCase().replace(/\s+/g, "_"),
-      muscle: muscle.trim().toLowerCase(),
-      equipment: equipment.map((e) => e.trim().toLowerCase()),
-      imageUrl: null,
-      gifUrl: null,
-    },
-  });
+  if (providerIds.length === 0) return localResults;
+
+  try {
+    return [...localResults, ...(await exercisedbService.getByIds(providerIds))];
+  } catch (error) {
+    if (!canUseLocalFallback(error)) throw error;
+    console.warn(
+      "[exercise.service] ExerciseDB media unavailable:",
+      error.code ?? error.name,
+    );
+    return localResults;
+  }
 }
 
-async function updateMedia(name, { imageUrl, gifUrl }) {
-  return prisma.exercise.update({
-    where: { name },
-    data: {
-      ...(imageUrl !== undefined && { imageUrl }),
-      ...(gifUrl !== undefined && { gifUrl }),
-    },
-  });
-}
-
-module.exports = { getByMuscle, getByMuscles, getAll, getByName, create, updateMedia };
+module.exports = { getByMuscle, getByMuscles, getAll, getById, getByIds };
