@@ -6,7 +6,7 @@ exports.generateRoutine = async (req, res) => {
     res.status(201).json({ success: true, data: routine });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Error interno del servidor" });
   }
 };
 
@@ -16,7 +16,7 @@ exports.completeSession = async (req, res) => {
     res.status(201).json({ success: true, data: result });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Error interno del servidor" });
   }
 };
 
@@ -26,7 +26,7 @@ exports.getUserRoutines = async (req, res) => {
     res.status(200).json({ success: true, data: routines });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Error interno del servidor" });
   }
 };
 
@@ -40,7 +40,7 @@ exports.getRoutineProgress = async (req, res) => {
     if (error.message === "NOT_FOUND") {
       return res.status(404).json({ error: "Rutina no encontrada" });
     }
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Error interno del servidor" });
   }
 };
 
@@ -53,7 +53,7 @@ exports.deleteRoutine = async (req, res) => {
     if (error.message === "NOT_FOUND") {
       return res.status(404).json({ error: "Rutina no encontrada" });
     }
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Error interno del servidor" });
   }
 };
 
@@ -80,7 +80,7 @@ exports.applyPendingAdjustments = async (req, res) => {
     if (error.message === "NO_PENDING_ADJUSTMENTS") {
       return res.status(404).json({ error: "No hay ajustes pendientes" });
     }
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Error interno del servidor" });
   }
 };
 
@@ -101,6 +101,6 @@ exports.replaceExercise = async (req, res) => {
     if (error.message === "EXERCISE_NOT_FOUND") {
       return res.status(404).json({ error: "Ejercicio no encontrado en la rutina" });
     }
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Error interno del servidor" });
   }
 };

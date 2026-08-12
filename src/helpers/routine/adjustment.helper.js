@@ -1,7 +1,5 @@
-const { PrismaClient } = require("@prisma/client");
+const prisma = require("../../lib/prisma");
 const { compareReps } = require("./math.helper");
-
-const prisma = new PrismaClient();
 
 // cambios de series o peso grande = mayor, el resto es menor
 function classifyAdjustments(adjustments) {

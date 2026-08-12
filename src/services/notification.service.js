@@ -1,5 +1,4 @@
-const { PrismaClient } = require("@prisma/client");
-const db = new PrismaClient();
+const db = require("../lib/prisma");
 
 exports.createNotification = async (userId, { title, body, type = "info", routineId = null, pendingAdjustments = null }) => {
   return await db.notification.create({

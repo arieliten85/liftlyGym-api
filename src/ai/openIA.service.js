@@ -89,7 +89,7 @@ Formato exacto:
   }
 }`;
 
-    return this._callAI(prompt);
+    return this._callAI(prompt, "routine");
   }
 
   async adjustRoutine({ goal, experience, sessionCount, feedback, summary }) {
@@ -98,76 +98,45 @@ Formato exacto:
       return MOCK_ADJUST;
     }
 
-    //     const prompt = `
-    // Sos un entrenador personal experto en progresión de carga.
-    // El usuario completó una sesión. Analizá el resumen y ajustá su rutina para la próxima.
-
-    // Contexto:
-    // - Objetivo: ${goal}
-    // - Nivel: ${experience}
-    // - Sesiones completadas con esta rutina: ${sessionCount}
-
-    // Feedback subjetivo (escala 1-5):
-    // - Intensidad percibida: ${feedback.intensity ?? "no indicado"}
-    // - Energía al terminar: ${feedback.energy ?? "no indicado"}
-    // - Dolor/molestia: ${feedback.painLevel ?? "no indicado"}
-    // - Comentario: ${feedback.comment || "ninguno"}
-
-    // Resumen planificado vs ejecutado:
-    // ${JSON.stringify(summary, null, 2)}
-
-    // Reglas de ajuste:
-    // 1. Si completó TODAS las series con el peso planificado e intensidad ≤ 3 → subí peso (2.5-5kg) o reps
-    // 2. Si no completó todas las series o intensidad ≥ 4 → mantené o bajá ligeramente
-    // 3. Si dolor ≥ 4 → reducí carga del ejercicio afectado
-    // 4. Si hay series salteadas sistemáticamente → reducí sets
-    // 5. NUNCA cambies el nombre de los ejercicios
-    // 6. Solo incluí ejercicios que realmente necesitan cambio
-    // 7. Campos permitidos: sets (Int), reps (String "x-y"), weight (Float), restSeconds (Int)
-    // 8. Si no hay nada que ajustar devolvé adjustments vacío
-
-    // Devuelve SOLO JSON válido sin texto adicional.
-    // Formato exacto:
-    // {
-    //   "adjustments": [
-    //     { "name": "nombre_ejercicio", "weight": 32.5 }
-    //   ]
-    // }`;
     const prompt = `
-Actúa como un entrenador personal profesional experto en gimnasio.
-Analiza los datos del usuario y genera una rutina optimizada con pesos base reales.
+Sos un entrenador personal experto en progresión de carga.
+El usuario completó una sesión. Analizá el resumen y ajustá su rutina para la próxima.
 
-Datos del usuario:
-${JSON.stringify(userData, null, 2)}
+Contexto:
+- Objetivo: ${goal}
+- Nivel: ${experience}
+- Sesiones completadas con esta rutina: ${sessionCount}
 
-Reglas para los pesos (weight):
-- Asigna un peso base REALISTA en kg según el ejercicio y nivel de experiencia
-- principiante: pesos ligeros/moderados (ej: press banca 30-40kg, curl 8-12kg)
-- intermedio: pesos moderados (ej: press banca 60-80kg, curl 15-20kg)
-- avanzado: pesos altos (ej: press banca 90-120kg, curl 22-30kg)
-- Ejercicios corporales (dominadas, fondos): weight = 0
-- Ejercicios de aislamiento: siempre menos peso que compuestos
+Feedback subjetivo (escala 1-5):
+- Intensidad percibida: ${feedback.intensity ?? "no indicado"}
+- Energía al terminar: ${feedback.energy ?? "no indicado"}
+- Dolor/molestia: ${feedback.painLevel ?? "no indicado"}
+- Comentario: ${feedback.comment || "ninguno"}
 
-Reglas generales:
-- Usa EXACTAMENTE los mismos ejercicios proporcionados en userData.exercises, ni uno más ni uno menos
-- NUNCA agregues ni elimines ejercicios de la lista
+Resumen planificado vs ejecutado:
+${JSON.stringify(summary, null, 2)}
+
+Reglas de ajuste:
+- Si completó todas las series con el peso planificado e intensidad <= 3, subí peso (2.5-5kg) o reps.
+- Si no completó todas las series o intensidad >= 4, mantené o bajá ligeramente.
+- Si dolor >= 4, reducí carga del ejercicio afectado.
+- Si hay series salteadas sistemáticamente, reducí sets.
 - NUNCA cambies el nombre de los ejercicios
-- El array de exercises del resultado debe tener EXACTAMENTE la misma cantidad que userData.exercises
-- Adapta intensidad según experiencia
+- Solo incluí ejercicios que realmente necesitan cambio.
+- Campos permitidos: sets (Int), reps (String "x-y"), weight (Float), restSeconds (Int).
+- Si no hay nada que ajustar devolvé adjustments vacío.
 
 Devuelve SOLO JSON válido sin texto adicional.
 Formato exacto:
 {
-  "routine": {
-    "exercises": [
-      { "name": "string", "sets": 3, "reps": "10-12", "restSeconds": 90, "weight": 40 }
-    ]
-  }
+  "adjustments": [
+    { "name": "nombre_ejercicio", "weight": 32.5 }
+  ]
 }`;
-    return this._callAI(prompt);
+    return this._callAI(prompt, "adjustments");
   }
 
-  async _callAI(prompt) {
+  async _callAI(prompt, expectedShape) {
     try {
       const response = await client.chat.completions.create({
         model: "openrouter/auto",
@@ -183,13 +152,33 @@ Formato exacto:
 
       const text = response.choices[0].message.content.trim();
       const clean = text.replace(/```json|```/g, "").trim();
-      return JSON.parse(clean);
+      const parsed = JSON.parse(clean);
+
+      if (!this._isValidResponse(parsed, expectedShape)) {
+        throw new Error("INVALID_AI_RESPONSE");
+      }
+
+      return parsed;
     } catch (error) {
       console.error("[AI] Error:", error.message);
       if (error.status === 429)
         throw new Error("Límite de IA alcanzado. Intentá en un momento.");
-      throw new Error("Error en el servicio de IA: " + error.message);
+      throw new Error("Error en el servicio de IA");
     }
+  }
+
+  _isValidResponse(parsed, expectedShape) {
+    if (!parsed || typeof parsed !== "object") return false;
+
+    if (expectedShape === "routine") {
+      return Array.isArray(parsed.routine?.exercises);
+    }
+
+    if (expectedShape === "adjustments") {
+      return Array.isArray(parsed.adjustments);
+    }
+
+    return false;
   }
 }
 

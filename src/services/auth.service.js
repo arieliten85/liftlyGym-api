@@ -44,13 +44,13 @@ class AuthService {
     });
 
     if (!user) {
-      throw new Error("Usuario no encontrado");
+      throw new Error("Credenciales inválidas");
     }
 
     const validPassword = await bcrypt.compare(password.trim(), user.password);
 
     if (!validPassword) {
-      throw new Error("Contraseña incorrecta");
+      throw new Error("Credenciales inválidas");
     }
 
     const token = jwt.sign(

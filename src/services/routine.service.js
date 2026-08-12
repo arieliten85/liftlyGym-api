@@ -1,7 +1,7 @@
 const aiService = require("../ai/openIA.service");
 const { generarRutina } = require("../engine/routine.engine");
 const notificationService = require("./notification.service");
-const { PrismaClient } = require("@prisma/client");
+const prisma = require("../lib/prisma");
 
 const {
   buildSessionSummary,
@@ -13,7 +13,6 @@ const {
   applyAdjustments,
   buildAdjustmentNotification,
 } = require("../helpers/routine/adjustment.helper");
-const prisma = new PrismaClient();
 const exercisesDB = require("../data/exercises.mock");
 
 exports.generateRoutine = async (userId, payload) => {
@@ -355,14 +354,6 @@ exports.deleteRoutine = async (userId, routineId) => {
 };
 
 exports.replaceExercise = async (userId, routineId, exerciseName, newName) => {
-  console.log("[replaceExercise] userId:", userId, "routineId:", routineId);
-  console.log(
-    "[replaceExercise] exerciseName:",
-    exerciseName,
-    "newName:",
-    newName,
-  );
-
   const routine = await prisma.routine.findFirst({
     where: { id: routineId, userId },
   });
@@ -373,11 +364,6 @@ exports.replaceExercise = async (userId, routineId, exerciseName, newName) => {
     where: { routineId, name: exerciseName },
   });
 
-  console.log(
-    "[replaceExercise] existingExercise en rutina:",
-    existingExercise?.name ?? "NO ENCONTRADO",
-  );
-
   if (!existingExercise) throw new Error("EXERCISE_NOT_FOUND");
 
   // Buscar imageUrl y gifUrl del nuevo ejercicio en el catálogo
@@ -385,11 +371,6 @@ exports.replaceExercise = async (userId, routineId, exerciseName, newName) => {
     where: { name: newName },
     select: { name: true, imageUrl: true, gifUrl: true },
   });
-
-  console.log(
-    "[replaceExercise] catalogExercise:",
-    catalogExercise?.name ?? "NO ENCONTRADO EN CATALOGO",
-  );
 
   await prisma.routineExercise.updateMany({
     where: { routineId, name: exerciseName },
@@ -404,17 +385,6 @@ exports.replaceExercise = async (userId, routineId, exerciseName, newName) => {
     where: { routineId, name: newName },
   });
 
-  console.log(
-    "[replaceExercise] updatedExercise:",
-    updatedExercise?.name,
-    "imageUrl:",
-    updatedExercise?.imageUrl,
-  );
-  // En routine.service.js, al final de replaceExercise, antes del return:
-  console.log(
-    "[replaceExercise] FINAL updatedExercise:",
-    JSON.stringify(updatedExercise),
-  );
   return {
     replaced: exerciseName,
     with: newName,

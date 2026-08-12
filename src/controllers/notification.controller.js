@@ -9,7 +9,7 @@ exports.getNotifications = async (req, res) => {
 
     res.status(200).json({ success: true, data: notifications });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Error interno del servidor" });
   }
 };
 
@@ -23,7 +23,7 @@ exports.markAsRead = async (req, res) => {
     if (error.message === "NOT_FOUND") {
       return res.status(404).json({ error: "Notificación no encontrada" });
     }
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Error interno del servidor" });
   }
 };
 
@@ -33,6 +33,6 @@ exports.markAllAsRead = async (req, res) => {
     await notificationService.markAllAsRead(userId);
     res.status(200).json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Error interno del servidor" });
   }
 };

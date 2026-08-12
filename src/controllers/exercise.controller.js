@@ -3,6 +3,9 @@ const exerciseService = require("../services/exercise.service");
 const getByMuscle = async (req, res) => {
   try {
     const { muscle, equipment } = req.query;
+    if (!muscle) {
+      return res.status(400).json({ success: false, message: "Se requiere el parámetro muscle" });
+    }
     const exercises = await exerciseService.getByMuscle(muscle, equipment?.split(","));
     res.status(200).json({ success: true, data: exercises });
   } catch (error) {
