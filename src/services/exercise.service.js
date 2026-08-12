@@ -1,10 +1,16 @@
 const prisma = require("../lib/prisma");
+const fallbackExercises = require("../data/exercises.mock");
 
 function normalize(str = "") {
   return str
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+async function getExerciseCatalog() {
+  const exercises = await prisma.exercise.findMany({ orderBy: { muscle: "asc" } });
+  return exercises.length > 0 ? exercises : fallbackExercises;
 }
 
  async function getByMuscle(muscleParam, equipmentParam) {
@@ -14,39 +20,36 @@ function normalize(str = "") {
     : [muscleParam.toLowerCase()];
   
   // Buscar ejercicios que tengan cualquiera de estos músculos
-  const all = await prisma.exercise.findMany({
-    where: {
-      muscle: {
-        in: muscles
-      }
-    }
-  });
+  const all = (await getExerciseCatalog()).filter((exercise) =>
+    muscles.includes(exercise.muscle),
+  );
 
   if (!equipmentParam || equipmentParam.length === 0) return all;
 
-  return all.filter((item) =>
+  const filtered = all.filter((item) =>
     item.equipment.some((eq) => equipmentParam.includes(eq)),
   );
+
+  return filtered.length > 0 ? filtered : all;
 }
 
  async function getByMuscles(musclesArray, equipmentParam) {
-  const all = await prisma.exercise.findMany({
-    where: {
-      muscle: {
-        in: musclesArray
-      }
-    }
-  });
+  const muscles = musclesArray.map((muscle) => muscle.trim().toLowerCase());
+  const all = (await getExerciseCatalog()).filter((exercise) =>
+    muscles.includes(exercise.muscle),
+  );
 
   if (!equipmentParam || equipmentParam.length === 0) return all;
 
-  return all.filter((item) =>
+  const filtered = all.filter((item) =>
     item.equipment.some((eq) => equipmentParam.includes(eq)),
   );
+
+  return filtered.length > 0 ? filtered : all;
 }
 
 async function getAll() {
-  return prisma.exercise.findMany({ orderBy: { muscle: "asc" } });
+  return getExerciseCatalog();
 }
 
 async function getByName(name) {

@@ -3,6 +3,7 @@ function resolverMusculos(payload) {
   const map = {
     push:      ["chest", "shoulders", "triceps"],
     pull:      ["back", "biceps"],
+    legs_quick:["legs", "glutes"],
     legs:      ["legs", "glutes"],
     upper:     ["chest", "back", "shoulders", "biceps", "triceps"],
     lower:     ["legs", "glutes"],
