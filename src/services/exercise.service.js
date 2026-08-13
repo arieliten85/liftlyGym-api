@@ -1,4 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
+const mockExercises = require("../data/exercises.mock");
+
 const prisma = new PrismaClient();
 
 function normalize(str = "") {
@@ -8,6 +10,19 @@ function normalize(str = "") {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+async function getExerciseCatalog() {
+  const exercises = await prisma.exercise.findMany();
+  return exercises.length > 0 ? exercises : mockExercises;
+}
+
+function filterByEquipment(exercises, equipmentParam) {
+  if (!equipmentParam || equipmentParam.length === 0) return exercises;
+
+  return exercises.filter((item) =>
+    item.equipment.some((eq) => equipmentParam.includes(eq)),
+  );
+}
+
  async function getByMuscle(muscleParam, equipmentParam) {
   // Si muscleParam contiene comas, dividir en múltiples músculos
   const muscles = muscleParam.includes(",") 
@@ -15,35 +30,17 @@ function normalize(str = "") {
     : [muscleParam.toLowerCase()];
   
   // Buscar ejercicios que tengan cualquiera de estos músculos
-  const all = await prisma.exercise.findMany({
-    where: {
-      muscle: {
-        in: muscles
-      }
-    }
-  });
+  const all = await getExerciseCatalog();
+  const byMuscle = all.filter((item) => muscles.includes(item.muscle));
 
-  if (!equipmentParam || equipmentParam.length === 0) return all;
-
-  return all.filter((item) =>
-    item.equipment.some((eq) => equipmentParam.includes(eq)),
-  );
+  return filterByEquipment(byMuscle, equipmentParam);
 }
 
  async function getByMuscles(musclesArray, equipmentParam) {
-  const all = await prisma.exercise.findMany({
-    where: {
-      muscle: {
-        in: musclesArray
-      }
-    }
-  });
+  const all = await getExerciseCatalog();
+  const byMuscle = all.filter((item) => musclesArray.includes(item.muscle));
 
-  if (!equipmentParam || equipmentParam.length === 0) return all;
-
-  return all.filter((item) =>
-    item.equipment.some((eq) => equipmentParam.includes(eq)),
-  );
+  return filterByEquipment(byMuscle, equipmentParam);
 }
 
 async function getAll() {
