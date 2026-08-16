@@ -1,17 +1,12 @@
-const exercisesDB = require("../data/exercises.mock");
+const exerciseService = require("../services/exercise.service");
 
 function esCompuesto(nombre) {
   const compuestos = ["press", "sentadilla", "peso_muerto", "dominadas", "remo", "prensa", "hip_thrust", "zancadas"];
   return compuestos.some((p) => nombre.includes(p));
 }
 
-function seleccionarEjercicios({ musculos, equipamiento, volumen }) {
-  // Ya no necesita mapeo — los valores coinciden directo
-  const filtrados = exercisesDB.filter(
-    (e) =>
-      musculos.includes(e.muscle) &&
-      e.equipment.includes(equipamiento),
-  );
+async function seleccionarEjercicios({ musculos, equipamiento, volumen }) {
+  const filtrados = await exerciseService.getByMuscles(musculos, [equipamiento]);
 
   if (filtrados.length === 0) {
     console.warn(`[engine] No exercises — musculos: ${musculos}, equipamiento: ${equipamiento}`);

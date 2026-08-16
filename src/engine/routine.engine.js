@@ -2,12 +2,12 @@ const { resolverMusculos } = require("./muscle-resolver");
 const { calcularVolumen } = require("./volume-calculator");
 const { seleccionarEjercicios } = require("./exercise-selector");
 
-function generarRutina(payload) {
+async function generarRutina(payload) {
   const musculos = resolverMusculos(payload);
 
   const volumen = calcularVolumen(payload);
 
-  const exercises = seleccionarEjercicios({
+  const exercises = await seleccionarEjercicios({
     musculos,
     equipamiento: payload.equipamiento,
     volumen,
