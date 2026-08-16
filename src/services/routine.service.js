@@ -1,6 +1,7 @@
 const aiService = require("../ai/openIA.service");
 const { generarRutina } = require("../engine/routine.engine");
 const notificationService = require("./notification.service");
+const exerciseService = require("./exercise.service");
 const { PrismaClient } = require("@prisma/client");
 
 const {
@@ -14,23 +15,33 @@ const {
   buildAdjustmentNotification,
 } = require("../helpers/routine/adjustment.helper");
 const prisma = new PrismaClient();
-const exercisesDB = require("../data/exercises.mock");
 
 exports.generateRoutine = async (userId, payload) => {
   const { modo, objetivo, nivel, equipamiento, rutina } = payload;
 
   // quick: la IA genera la rutina desde el engine
   if (modo === "quick") {
-    const rutinaBase = generarRutina(payload);
+    const rutinaBase = await generarRutina(payload);
     const rutinaConIA = await aiService.generateRoutine({
       ...payload,
       exercises: rutinaBase.exercises,
     });
 
-    const exercises = rutinaConIA.routine.exercises.map((ex) => {
-      const found = exercisesDB.find((e) => e.name === ex.name);
-      return { ...ex, muscle: found?.muscle ?? null };
-    });
+    const aiExercisesByName = Object.fromEntries(
+      (rutinaConIA.routine.exercises ?? []).map((ex) => [ex.name, ex]),
+    );
+    const exercises = await Promise.all(rutinaBase.exercises.map(async (ex) => {
+      const aiExercise = aiExercisesByName[ex.name];
+      const found = await exerciseService.getByName(ex.name);
+      return {
+        ...ex,
+        sets: aiExercise?.sets ?? ex.sets,
+        reps: aiExercise?.reps ?? ex.reps,
+        restSeconds: aiExercise?.restSeconds ?? ex.restSeconds,
+        weight: aiExercise?.weight ?? ex.weight,
+        muscle: found?.muscle ?? ex.muscle ?? null,
+      };
+    }));
 
     return await _saveRoutine(userId, {
       name: rutina ?? "Mi rutina",
@@ -90,12 +101,11 @@ exports.generateRoutine = async (userId, payload) => {
 // helper interno, no lo exportes
 async function _saveRoutine(userId, { name, modo, objetivo, nivel, equipamiento, split, exercises }) {
   const exerciseNames = exercises.map((e) => e.name);
-  const catalog = await prisma.exercise.findMany({
-    where: { name: { in: exerciseNames } },
-    select: { name: true, imageUrl: true, gifUrl: true },
-  });
+  const catalog = await Promise.all(
+    exerciseNames.map(async (name) => exerciseService.getByName(name)),
+  );
   const mediaByName = Object.fromEntries(
-    catalog.map((e) => [e.name, { imageUrl: e.imageUrl, gifUrl: e.gifUrl }])
+    catalog.filter(Boolean).map((e) => [e.name, { imageUrl: e.imageUrl, gifUrl: e.gifUrl }])
   );
 
   return prisma.routine.create({
@@ -116,8 +126,8 @@ async function _saveRoutine(userId, { name, modo, objetivo, nivel, equipamiento,
           restSeconds: ex.restSeconds,
           weight: ex.weight ?? null,
           order: index,
-          imageUrl: mediaByName[ex.name]?.imageUrl ?? null,
-          gifUrl: mediaByName[ex.name]?.gifUrl ?? null,
+          imageUrl: ex.imageUrl ?? mediaByName[ex.name]?.imageUrl ?? null,
+          gifUrl: ex.gifUrl ?? mediaByName[ex.name]?.gifUrl ?? null,
         })),
       },
     },
@@ -301,7 +311,27 @@ exports.getUserRoutines = async (userId) => {
     orderBy: { createdAt: "desc" },
   });
 
-  return routines;
+  let catalog = [];
+  try {
+    catalog = await exerciseService.getExerciseCatalog();
+  } catch (error) {
+    console.warn("[lift-api] using stored routine media", error.message);
+  }
+  const mediaByName = Object.fromEntries(
+    catalog.map((exercise) => [
+      exercise.name,
+      { imageUrl: exercise.imageUrl ?? null, gifUrl: exercise.gifUrl ?? null },
+    ]),
+  );
+
+  return routines.map((routine) => ({
+    ...routine,
+    exercises: routine.exercises.map((exercise) => ({
+      ...exercise,
+      imageUrl: mediaByName[exercise.name]?.imageUrl ?? exercise.imageUrl ?? null,
+      gifUrl: mediaByName[exercise.name]?.gifUrl ?? exercise.gifUrl ?? null,
+    })),
+  }));
 };
 
 exports.getRoutineProgress = async (userId, routineId) => {
@@ -381,10 +411,7 @@ exports.replaceExercise = async (userId, routineId, exerciseName, newName) => {
   if (!existingExercise) throw new Error("EXERCISE_NOT_FOUND");
 
   // Buscar imageUrl y gifUrl del nuevo ejercicio en el catálogo
-  const catalogExercise = await prisma.exercise.findUnique({
-    where: { name: newName },
-    select: { name: true, imageUrl: true, gifUrl: true },
-  });
+  const catalogExercise = await exerciseService.getByName(newName);
 
   console.log(
     "[replaceExercise] catalogExercise:",

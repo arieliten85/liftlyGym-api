@@ -7,6 +7,9 @@ const getByMuscle = async (req, res) => {
     res.status(200).json({ success: true, data: exercises });
   } catch (error) {
     console.error("[getByMuscle]", error);
+    if (error.code === "EXERCISE_CATALOG_UNAVAILABLE") {
+      return res.status(503).json({ success: false, message: error.message });
+    }
     res.status(500).json({ success: false, message: "Error interno" });
   }
 };
@@ -22,6 +25,9 @@ const getByMuscle = async (req, res) => {
     res.status(200).json({ success: true, data: exercises });
   } catch (error) {
     console.error("[getByMuscles]", error);
+    if (error.code === "EXERCISE_CATALOG_UNAVAILABLE") {
+      return res.status(503).json({ success: false, message: error.message });
+    }
     res.status(500).json({ success: false, message: "Error interno" });
   }
 };
@@ -32,6 +38,9 @@ const getAll = async (req, res) => {
     res.status(200).json({ success: true, data: exercises });
   } catch (error) {
     console.error("[getAll]", error);
+    if (error.code === "EXERCISE_CATALOG_UNAVAILABLE") {
+      return res.status(503).json({ success: false, message: error.message });
+    }
     res.status(500).json({ success: false, message: "Error interno" });
   }
 };
@@ -43,6 +52,9 @@ const createExercise = async (req, res) => {
     res.status(201).json({ success: true, data: exercise });
   } catch (error) {
     console.error("[createExercise]", error);
+    if (error.code === "EXERCISE_CATALOG_READ_ONLY") {
+      return res.status(501).json({ success: false, message: error.message });
+    }
     if (error.code === "DUPLICATE_NAME") {
       return res.status(400).json({ success: false, message: "Nombre duplicado" });
     }
@@ -61,6 +73,9 @@ const updateExerciseMedia = async (req, res) => {
     res.status(200).json({ success: true, data: updated });
   } catch (error) {
     console.error("[updateExerciseMedia]", error);
+    if (error.code === "EXERCISE_CATALOG_READ_ONLY") {
+      return res.status(501).json({ success: false, message: error.message });
+    }
     res.status(500).json({ success: false, message: "Error interno" });
   }
 };
